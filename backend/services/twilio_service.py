@@ -136,6 +136,9 @@ class TwilioService:
         Returns:
             TwiML XML string
         """
+        # Get settings for API base URL
+        settings = get_settings()
+
         response = VoiceResponse()
 
         # Language-specific greetings
@@ -147,18 +150,20 @@ class TwilioService:
             "de": "Hallo! Ich bin Ihr virtueller Assistent. Ich würde gerne mit Ihnen über die Planung eines Treffens sprechen."
         }
 
-        greeting_text = greetings.get(language, greetings["en"])
+        # Use English for trial account compatibility (Hebrew TTS may not work)
+        greeting_text = greetings.get("en")
+        tts_language = "en-US"
 
-        # Use Gather to collect speech
+        # Use Gather to collect speech with absolute URL
         gather = Gather(
             input='speech',
-            action='/api/webhooks/twilio/process-speech',
+            action=f'{settings.api_base_url}/api/webhooks/twilio/process-speech',  # Absolute URL for ngrok
             method='POST',
-            language=language if language != "he" else "he-IL",
+            language=tts_language,
             speech_timeout='auto',
-            timeout=3
+            timeout=5  # Increased timeout for better user experience
         )
-        gather.say(greeting_text, language=language if language != "he" else "he-IL")
+        gather.say(greeting_text, language=tts_language)
 
         response.append(gather)
 
@@ -180,23 +185,29 @@ class TwilioService:
         Returns:
             TwiML XML string
         """
+        # Get settings for API base URL
+        settings = get_settings()
+
         response = VoiceResponse()
 
+        # Use English for trial account compatibility
+        tts_language = "en-US"
+
         if not end_call:
-            # Continue conversation
+            # Continue conversation with absolute URL
             gather = Gather(
                 input='speech',
-                action='/api/webhooks/twilio/process-speech',
+                action=f'{settings.api_base_url}/api/webhooks/twilio/process-speech',  # Absolute URL for ngrok
                 method='POST',
-                language=language if language != "he" else "he-IL",
+                language=tts_language,
                 speech_timeout='auto',
-                timeout=3
+                timeout=5  # Increased timeout for better user experience
             )
-            gather.say(text, language=language if language != "he" else "he-IL")
+            gather.say(text, language=tts_language)
             response.append(gather)
         else:
             # End call
-            response.say(text, language=language if language != "he" else "he-IL")
+            response.say(text, language=tts_language)
             response.hangup()
 
         return str(response)

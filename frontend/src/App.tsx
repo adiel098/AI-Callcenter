@@ -5,6 +5,7 @@ import Leads from './pages/Leads'
 import Calls from './pages/Calls'
 import Meetings from './pages/Meetings'
 import Analytics from './pages/Analytics'
+import Settings from './pages/Settings'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from 'sonner'
 
@@ -18,6 +19,7 @@ function App() {
           <Route path="/calls" element={<Calls />} />
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

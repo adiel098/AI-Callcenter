@@ -8,8 +8,12 @@ from typing import List, Dict, Optional, Tuple, Any
 from pathlib import Path
 from datetime import datetime, timedelta
 import json
+from sqlalchemy.orm import Session
 
 from backend.config import get_settings
+from backend.database import SessionLocal
+from backend.models.setting import Setting
+from backend.services.cache_service import get_cache_service
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -49,14 +53,53 @@ class LLMService:
         self.calendar_service = calendar_service
 
     def _load_system_prompt(self) -> str:
-        """Load the base system prompt from file"""
+        """
+        Load the base system prompt from database (with cache) or file fallback.
+
+        Priority:
+        1. Redis cache (5-min TTL)
+        2. Database settings table
+        3. File (prompts/system_prompt_en.txt)
+        4. Hardcoded fallback
+
+        Returns:
+            System prompt string
+        """
+        cache_key = "settings:system_prompt_en"
+        cache = get_cache_service()
+
+        # Try cache first
+        cached_prompt = cache.get(cache_key)
+        if cached_prompt:
+            logger.debug("System prompt loaded from cache")
+            return cached_prompt
+
+        # Try database
+        try:
+            db = SessionLocal()
+            setting = db.query(Setting).filter(Setting.key == "system_prompt_en").first()
+            db.close()
+
+            if setting and setting.value:
+                logger.info("System prompt loaded from database")
+                # Cache for 5 minutes
+                cache.set(cache_key, setting.value, ttl=300)
+                return setting.value
+        except Exception as e:
+            logger.warning(f"Failed to load system prompt from database: {e}")
+
+        # Try file fallback
         prompts_dir = Path(__file__).parent.parent / "prompts"
         prompt_path = prompts_dir / "system_prompt_en.txt"
 
         if prompt_path.exists():
-            return prompt_path.read_text(encoding="utf-8")
+            file_prompt = prompt_path.read_text(encoding="utf-8")
+            logger.info("System prompt loaded from file (fallback)")
+            cache.set(cache_key, file_prompt, ttl=300)
+            return file_prompt
 
-        # Fallback if file doesn't exist
+        # Final fallback
+        logger.warning("Using hardcoded system prompt (all sources failed)")
         return "You are a professional AI assistant scheduling meetings."
 
     def _get_system_prompt_with_tools(self) -> str:

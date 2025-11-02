@@ -1,6 +1,14 @@
 """
 Main FastAPI application
 """
+import sys
+import os
+
+# Ensure parent directory is in Python path for imports to work
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -9,6 +17,7 @@ import sentry_sdk
 from backend.config import get_settings
 from backend.database import init_db
 from backend.api.routes import leads, calls, meetings, campaigns, analytics, webhooks
+from backend.api.routes import settings as settings_routes
 
 # Configure logging
 logging.basicConfig(
@@ -49,6 +58,7 @@ app.include_router(meetings.router, prefix="/api/meetings", tags=["meetings"])
 app.include_router(campaigns.router, prefix="/api/campaigns", tags=["campaigns"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
+app.include_router(settings_routes.router, prefix="/api", tags=["settings"])
 
 
 @app.on_event("startup")

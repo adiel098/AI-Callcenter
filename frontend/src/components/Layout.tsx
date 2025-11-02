@@ -45,6 +45,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/calls', label: 'Calls', icon: Phone },
     { path: '/meetings', label: 'Meetings', icon: Calendar },
     { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -112,10 +113,12 @@ export default function Layout({ children }: LayoutProps) {
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
+              <Link to="/settings">
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <LogOut className="mr-2 h-4 w-4" />

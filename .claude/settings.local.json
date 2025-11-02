@@ -35,7 +35,13 @@
       "Bash(timeout 10 bash:*)",
       "Bash(export DATABASE_URL=\"sqlite:///./ai_scheduler.db\")",
       "Bash(DATABASE_URL=\"sqlite:///./ai_scheduler.db\" uvicorn:*)",
-      "Bash(timeout 3 bash:*)"
+      "Bash(timeout 3 bash:*)",
+      "Bash(export PYTHONPATH=\"/c/Users/A/Desktop/HomeWork:$PYTHONPATH\":*)",
+      "Bash(PYTHONPATH=\"C:\\Users\\A\\Desktop\\HomeWork\" py -3.13 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000)",
+      "Bash(tasklist:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout 8 bash -c 'while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done && echo \"\"Backend is ready\"\"')"
     ],
     "deny": [],
     "ask": []

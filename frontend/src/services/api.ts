@@ -78,4 +78,25 @@ export const getCampaignStatus = async () => {
   return response.data
 }
 
+// Settings
+export const getSystemPrompt = async () => {
+  const response = await api.get('/settings/system_prompt')
+  return response.data
+}
+
+export const updateSystemPrompt = async (value: string) => {
+  const response = await api.put('/settings/system_prompt', { value })
+  return response.data
+}
+
+export const getDefaultSystemPrompt = async () => {
+  const response = await api.get('/settings/system_prompt/default')
+  return response.data
+}
+
+export const clearSettingsCache = async () => {
+  const response = await api.post('/settings/cache/clear')
+  return response.data
+}
+
 export default api

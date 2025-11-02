@@ -6,6 +6,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
 import logging
+import sys
+import os
+
+# Ensure parent directory is in path for imports
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
 from backend.database import get_db
 from backend.models import Lead, LeadStatus
@@ -51,8 +58,14 @@ async def start_campaign(campaign: CampaignCreate, db: Session = Depends(get_db)
             )
 
         # Queue leads for calling with Celery
-        from backend.workers.tasks import initiate_call
-        import time
+        # Use send_task to avoid import issues
+        try:
+            from backend.workers.celery_app import celery_app
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            logger.error(f"Failed to import celery_app: {error_details}")
+            raise HTTPException(status_code=500, detail=f"Import error: {str(e)}\n{error_details}")
 
         queued_count = 0
         failed_count = 0
@@ -66,7 +79,12 @@ async def start_campaign(campaign: CampaignCreate, db: Session = Depends(get_db)
                 # Queue Celery task with countdown for rate limiting
                 # Stagger calls by 5 seconds each to avoid overwhelming the system
                 countdown = queued_count * 5
-                initiate_call.apply_async(args=[lead.id], countdown=countdown)
+                # Use send_task with task name instead of importing the task function
+                celery_app.send_task(
+                    'backend.workers.tasks.initiate_call',
+                    args=[lead.id],
+                    countdown=countdown
+                )
 
                 queued_count += 1
                 logger.info(f"Queued call for lead {lead.id} (delay: {countdown}s)")

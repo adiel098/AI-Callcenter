@@ -145,8 +145,9 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
 
         # Import Celery task
         from backend.workers.tasks import process_conversation_turn
-        from backend.models import ConversationHistory, SpeakerRole, Lead, ConversationIntent
+        from backend.models import ConversationHistory, SpeakerRole, Lead
         from backend.services import LLMService, CalendarService
+        from backend.services.llm_service import ConversationIntent
 
         # Get language
         language = call.language or 'en'
@@ -185,7 +186,6 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
         intent, ai_response, tool_calls = await llm_service.get_response_with_tools(
             user_message=speech_result,
             conversation_history=conversation_messages[:-1],
-            language=language,
             lead_info={"name": lead.name if lead else "there", "email": lead.email if lead else ""}
         )
 

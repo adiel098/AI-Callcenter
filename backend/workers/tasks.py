@@ -181,7 +181,6 @@ def process_conversation_turn(
                 self.llm.get_response_with_tools(
                     user_message=user_message,
                     conversation_history=conversation_messages[:-1],
-                    language=call.language or 'en',
                     lead_info={"name": lead.name, "email": lead.email}
                 )
             )
@@ -290,7 +289,7 @@ def finalize_call(self, call_id: int):
             import asyncio
             loop = asyncio.get_event_loop()
             summary = loop.run_until_complete(
-                self.llm.summarize_call(conversation_messages, call.language or 'en')
+                self.llm.summarize_call(conversation_messages)
             )
 
             if meeting:

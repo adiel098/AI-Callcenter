@@ -102,6 +102,33 @@ class LLMService:
         logger.warning("Using hardcoded system prompt (all sources failed)")
         return "You are a professional AI assistant scheduling meetings."
 
+    async def generate_opening_message(self, lead_info: Dict[str, Any]) -> str:
+        """
+        Generate personalized opening message for a lead.
+
+        This replaces the generic greeting with an AI-generated personal message
+        that follows the system prompt's example opening and mentions the lead's name.
+
+        Args:
+            lead_info: Dictionary with 'name', 'email', optionally 'company'
+
+        Returns:
+            Personalized opening message (1-2 sentences)
+        """
+        try:
+            lead_name = lead_info.get('name', 'there')
+
+            # Use the system prompt's example opening as a template
+            opening_template = f"""Hi {lead_name}, this is Alex calling from Alta AI. How are you doing today?"""
+
+            logger.info(f"Generated opening for {lead_name}")
+            return opening_template
+
+        except Exception as e:
+            logger.error(f"Failed to generate opening message: {e}")
+            # Fallback to simple greeting
+            return f"Hi {lead_info.get('name', 'there')}, this is Alex from Alta AI. How are you doing today?"
+
     def _get_system_prompt_with_tools(self) -> str:
         """Get system prompt enhanced with tool instructions"""
         base_prompt = self.system_prompt
@@ -221,8 +248,61 @@ Google Calendar will automatically send the invitation and reminders.
             logger.error(f"Tool execution error ({tool_name}): {str(e)}")
             return {"error": str(e)}
 
+    def _parse_date_string(self, date_str: str) -> datetime:
+        """
+        Parse natural language or ISO date string to datetime.
+
+        Supports:
+        - Natural language: "tomorrow", "next week", "next Monday", "in 3 days"
+        - ISO format: "2025-01-10"
+        - Relative: "in X days"
+
+        Args:
+            date_str: Date string to parse
+
+        Returns:
+            Parsed datetime object (defaults to tomorrow if unparseable)
+        """
+        date_str_lower = date_str.lower().strip()
+        now = datetime.utcnow()
+
+        # Handle common natural language dates
+        if date_str_lower == "tomorrow":
+            return now + timedelta(days=1)
+        elif date_str_lower == "next week":
+            return now + timedelta(days=7)
+        elif "next" in date_str_lower:
+            # For "next Monday", "next Tuesday", etc., default to next week
+            return now + timedelta(days=7)
+        elif "in" in date_str_lower and "day" in date_str_lower:
+            # Handle "in 3 days", "in 5 days", etc.
+            try:
+                days = int(''.join(filter(str.isdigit, date_str_lower)))
+                return now + timedelta(days=days)
+            except ValueError:
+                return now + timedelta(days=1)
+        else:
+            # Try parsing as ISO format (e.g., "2025-01-10")
+            try:
+                return datetime.fromisoformat(date_str)
+            except (ValueError, TypeError):
+                # Default to tomorrow if unparseable
+                logger.warning(f"Could not parse date '{date_str}', defaulting to tomorrow")
+                return now + timedelta(days=1)
+
     async def _check_calendar_availability(self, args: Dict) -> Dict:
-        """Check calendar availability and return free slots"""
+        """
+        Check calendar availability and return free slots.
+
+        Args:
+            args: Dictionary containing:
+                - preferred_date: Natural language date (e.g., "next week", "tomorrow")
+                - duration_minutes: Meeting duration (default: 30)
+                - num_slots: Number of slots to return (default: 3)
+
+        Returns:
+            Dictionary with success status and available slots
+        """
         if not self.calendar_service:
             logger.error("Calendar service not available")
             return {
@@ -233,19 +313,34 @@ Google Calendar will automatically send the invitation and reminders.
         try:
             duration = args.get("duration_minutes", 30)
             num_slots = args.get("num_slots", 3)
+            preferred_date = args.get("preferred_date", "tomorrow")
+
+            # Parse the preferred date
+            start_date = self._parse_date_string(preferred_date)
+            logger.info(f"Checking availability from {start_date.date()} (user requested: {preferred_date})")
+
+            # Calculate end date (2 weeks from preferred date)
+            end_date = start_date + timedelta(days=14)
 
             # Get available slots from calendar service
-            slots = self.calendar_service.get_next_available_slots(
-                count=num_slots,
+            slots = self.calendar_service.get_available_slots(
+                start_date=start_date,
+                end_date=end_date,
                 duration_minutes=duration
             )
 
+            # Extract just the display strings for the LLM
+            display_slots = [slot['display'] for slot in slots[:num_slots]]
+
+            logger.info(f"Found {len(display_slots)} available slots")
+
             return {
                 "success": True,
-                "available_slots": slots
+                "available_slots": display_slots
             }
 
         except Exception as e:
+            logger.error(f"Error checking calendar availability: {e}")
             return {"success": False, "error": str(e)}
 
     async def _book_meeting(self, args: Dict) -> Dict:

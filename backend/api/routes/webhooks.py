@@ -83,8 +83,10 @@ async def twilio_status_callback(request: Request, db: Session = Depends(get_db)
 @router.post("/twilio/voice")
 async def twilio_voice_callback(request: Request, db: Session = Depends(get_db)):
     """
-    Handle Twilio voice callback (when call is answered)
-    This returns TwiML instructions
+    Handle Twilio voice callback (when call is answered).
+
+    NEW: Instead of playing generic greeting, generates personalized AI opening
+    and saves it to conversation history.
     """
     try:
         form_data = await request.form()
@@ -97,14 +99,54 @@ async def twilio_voice_callback(request: Request, db: Session = Depends(get_db))
         call = db.query(Call).filter(Call.twilio_call_sid == call_sid).first()
 
         if not call:
-            # Return generic TwiML
-            return twilio_service.generate_twiml_greeting()
+            # Return generic TwiML as fallback
+            logger.warning(f"Call not found for SID {call_sid}, using generic greeting")
+            twiml = twilio_service.generate_twiml_greeting()
+            from fastapi.responses import Response
+            return Response(content=twiml, media_type="application/xml")
 
-        # Get language from call
+        # Get lead and language
+        lead = db.query(Lead).filter(Lead.id == call.lead_id).first()
         language = call.language or 'en'
 
-        # Generate TwiML greeting
-        twiml = twilio_service.generate_twiml_greeting(language)
+        try:
+            # Import services
+            from backend.services import CalendarService, LLMService
+            from backend.models import ConversationHistory, SpeakerRole
+
+            # Generate personalized opening message
+            calendar_service = CalendarService()
+            llm_service = LLMService(calendar_service=calendar_service)
+
+            opening_message = await llm_service.generate_opening_message(
+                lead_info={
+                    "name": lead.name if lead else "there",
+                    "email": lead.email if lead else ""
+                }
+            )
+
+            # Save AI opening to conversation history
+            ai_turn = ConversationHistory(
+                call_id=call.id,
+                role=SpeakerRole.AI,
+                message=opening_message
+            )
+            db.add(ai_turn)
+            db.commit()
+
+            logger.info(f"Generated personalized opening for {call_sid}: {opening_message[:50]}...")
+
+            # Return TwiML with personalized message (no generic greeting)
+            twiml = twilio_service.generate_twiml_response(
+                opening_message,
+                language,
+                end_call=False
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to generate opening message: {e}, falling back to generic greeting")
+            # Fall back to generic greeting if LLM fails
+            twiml = twilio_service.generate_twiml_greeting(language)
 
         from fastapi.responses import Response
         return Response(content=twiml, media_type="application/xml")

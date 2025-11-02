@@ -1,9 +1,9 @@
 """Initialize database and add sample data"""
 from datetime import datetime, timedelta
-from database import engine, Base, get_db
-from models.lead import Lead
-from models.call import Call
-from models.meeting import Meeting
+from backend.database import engine, Base, get_db
+from backend.models.lead import Lead
+from backend.models.call import Call
+from backend.models.meeting import Meeting
 
 # Create all tables
 print("Creating database tables...")

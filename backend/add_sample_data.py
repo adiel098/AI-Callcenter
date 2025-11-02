@@ -3,10 +3,10 @@ Script to add sample data to the database for testing the frontend
 Run this from the backend directory: cd backend && python add_sample_data.py
 """
 from datetime import datetime, timedelta
-from database import get_db
-from models.lead import Lead
-from models.call import Call
-from models.meeting import Meeting
+from backend.database import get_db
+from backend.models.lead import Lead
+from backend.models.call import Call
+from backend.models.meeting import Meeting
 
 def add_sample_data():
     db = next(get_db())
@@ -20,14 +20,14 @@ def add_sample_data():
 
         # Add sample leads
         leads_data = [
-            {"name": "John Doe", "phone": "+1234567890", "email": "john@example.com", "company": "Acme Corp", "status": "contacted"},
-            {"name": "Jane Smith", "phone": "+1234567891", "email": "jane@example.com", "company": "Tech Inc", "status": "meeting_scheduled"},
-            {"name": "Bob Johnson", "phone": "+1234567892", "email": "bob@example.com", "company": "StartupXYZ", "status": "pending"},
-            {"name": "Alice Williams", "phone": "+1234567893", "email": "alice@example.com", "company": "BigCo", "status": "contacted"},
-            {"name": "Charlie Brown", "phone": "+1234567894", "email": "charlie@example.com", "company": "SmallBiz", "status": "not_interested"},
-            {"name": "David Lee", "phone": "+1234567895", "email": "david@example.com", "company": "DataCorp", "status": "contacted"},
-            {"name": "Emma Davis", "phone": "+1234567896", "email": "emma@example.com", "company": "CloudSoft", "status": "pending"},
-            {"name": "Frank Miller", "phone": "+1234567897", "email": "frank@example.com", "company": "AI Solutions", "status": "contacted"},
+            {"name": "John Doe", "phone": "+1234567890", "email": "john@example.com", "status": "contacted"},
+            {"name": "Jane Smith", "phone": "+1234567891", "email": "jane@example.com", "status": "meeting_scheduled"},
+            {"name": "Bob Johnson", "phone": "+1234567892", "email": "bob@example.com", "status": "pending"},
+            {"name": "Alice Williams", "phone": "+1234567893", "email": "alice@example.com", "status": "contacted"},
+            {"name": "Charlie Brown", "phone": "+1234567894", "email": "charlie@example.com", "status": "not_interested"},
+            {"name": "David Lee", "phone": "+1234567895", "email": "david@example.com", "status": "contacted"},
+            {"name": "Emma Davis", "phone": "+1234567896", "email": "emma@example.com", "status": "pending"},
+            {"name": "Frank Miller", "phone": "+1234567897", "email": "frank@example.com", "status": "contacted"},
         ]
 
         leads = []

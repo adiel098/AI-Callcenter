@@ -45,6 +45,11 @@ export const uploadLeadsCSV = async (file: File) => {
   return response.data
 }
 
+export const deleteLead = async (leadId: number) => {
+  const response = await api.delete(`/leads/${leadId}`)
+  return response.data
+}
+
 // Calls
 export const getCalls = async (page = 1, pageSize = 50) => {
   const response = await api.get(`/calls/?page=${page}&page_size=${pageSize}`)

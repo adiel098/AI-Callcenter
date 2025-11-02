@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, uploadLeadsCSV, createLead, startCampaign } from '../services/api';
+import { getLeads, uploadLeadsCSV, createLead, startCampaign, deleteLead } from '../services/api';
 import { PageHeader } from '@/components/PageHeader';
 import { DataTable } from '@/components/DataTable';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,6 @@ interface Lead {
   name: string;
   phone: string;
   email?: string;
-  company?: string;
   status: 'pending' | 'calling' | 'contacted' | 'meeting_scheduled' | 'not_interested';
   language?: string;
   created_at: string;
@@ -119,14 +118,6 @@ export default function Leads() {
       },
     },
     {
-      accessorKey: 'company',
-      header: 'Company',
-      cell: ({ row }) => {
-        const company = row.getValue('company') as string;
-        return company || <span className="text-xs text-muted-foreground">—</span>;
-      },
-    },
-    {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => {
@@ -152,7 +143,8 @@ export default function Leads() {
     },
     {
       id: 'actions',
-      cell: () => {
+      cell: ({ row }) => {
+        const lead = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -173,7 +165,10 @@ export default function Leads() {
                 <FileText className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => handleDeleteLead(lead.id, lead.name)}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
@@ -297,6 +292,27 @@ export default function Leads() {
       console.error(error);
     } finally {
       setIsStartingCampaign(false);
+    }
+  };
+
+  const handleDeleteLead = async (leadId: number, leadName: string) => {
+    // Confirm deletion
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${leadName}"? This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteLead(leadId);
+      toast.success('Lead deleted successfully!');
+      refetch(); // Refresh the leads list
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || 'Failed to delete lead. Please try again.';
+      toast.error(errorMessage);
+      console.error(error);
     }
   };
 

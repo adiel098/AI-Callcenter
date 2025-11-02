@@ -24,7 +24,8 @@
       "Bash(npx shadcn@latest init -d)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm run build:*)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []

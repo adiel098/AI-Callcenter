@@ -143,8 +143,7 @@ export default function Leads() {
     },
     {
       id: 'actions',
-      cell: ({ row }) => {
-        const lead = row.original;
+      cell: () => {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

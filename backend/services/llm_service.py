@@ -455,20 +455,42 @@ Google Calendar will automatically send the invitation and reminders.
         Returns:
             Intent classification
         """
-        # If meeting was booked via tool, that's the intent
-        if tool_calls:
-            for tool_call in tool_calls:
-                if tool_call["tool"] == "book_meeting" and tool_call["result"].get("success"):
-                    return ConversationIntent.MEETING_BOOKED
-
         ai_lower = ai_response.lower()
         user_lower = user_message.lower()
 
-        # Check for explicit markers
-        if any(word in ai_lower for word in ["booked", "confirmed", "scheduled", "calendar invite"]):
+        # Check if meeting was booked AND AI is explicitly ending the call
+        meeting_booked = False
+        if tool_calls:
+            for tool_call in tool_calls:
+                if tool_call["tool"] == "book_meeting" and tool_call["result"].get("success"):
+                    meeting_booked = True
+                    break
+
+        # Goodbye phrases that signal conversation is ending
+        goodbye_phrases = [
+            "goodbye", "bye", "talk to you then", "see you then",
+            "looking forward to our meeting", "have a great day",
+            "thank you for your time", "speak to you soon", "catch you later"
+        ]
+
+        # Check if AI is saying goodbye
+        ai_saying_goodbye = any(phrase in ai_lower for phrase in goodbye_phrases)
+
+        # If meeting was booked AND AI is saying goodbye, end the call
+        if meeting_booked and ai_saying_goodbye:
             return ConversationIntent.MEETING_BOOKED
 
-        if any(word in ai_lower for word in ["goodbye", "thank you for your time", "have a great day"]):
+        # If meeting was booked but AI is still asking questions, continue conversation
+        if meeting_booked and not ai_saying_goodbye:
+            # AI asking follow-up questions after booking - keep conversation going
+            return ConversationIntent.SCHEDULE_MEETING
+
+        # Check for explicit booking confirmation markers (without goodbye)
+        if any(word in ai_lower for word in ["confirmed", "calendar invite sent"]) and ai_saying_goodbye:
+            return ConversationIntent.MEETING_BOOKED
+
+        # AI wants to end call without booking
+        if ai_saying_goodbye:
             return ConversationIntent.END_CALL
 
         # User signals

@@ -293,12 +293,16 @@ class CalendarService:
             event_id = event_result['id']
 
             # Extract Google Meet link if available
-            google_meet_link = None
-            if 'conferenceData' in event_result and 'entryPoints' in event_result['conferenceData']:
-                for entry_point in event_result['conferenceData']['entryPoints']:
-                    if entry_point.get('entryPointType') == 'video':
-                        google_meet_link = entry_point.get('uri')
-                        break
+            # Try hangoutLink first (simpler and more reliable)
+            google_meet_link = event_result.get('hangoutLink')
+
+            # Fallback to conferenceData if hangoutLink not present
+            if not google_meet_link and 'conferenceData' in event_result:
+                if 'entryPoints' in event_result['conferenceData']:
+                    for entry_point in event_result['conferenceData']['entryPoints']:
+                        if entry_point.get('entryPointType') == 'video':
+                            google_meet_link = entry_point.get('uri')
+                            break
 
             logger.info(f"Meeting created: {event_id} at {start_time}, Meet link: {google_meet_link}")
 
@@ -393,6 +397,87 @@ class CalendarService:
         except HttpError as error:
             logger.error(f"Failed to cancel meeting: {error}")
             return False
+
+    def create_google_meet_link(self) -> Optional[str]:
+        """
+        Create a standalone Google Meet link by creating a temporary calendar event
+
+        This creates a calendar event with conferenceData, extracts the Meet link,
+        then deletes the event. Works with both OAuth and Service Accounts.
+
+        Returns:
+            Google Meet link (e.g., 'https://meet.google.com/abc-defg-hij') or None if failed
+        """
+        try:
+            # Service accounts on group calendars cannot create conference data
+            if self._is_service_account():
+                logger.warning("Service accounts cannot create Google Meet links on group calendars")
+                return None
+
+            calendar_id = settings.google_calendar_id or 'primary'
+
+            # Create a temporary event with Google Meet conference
+            temp_event = {
+                'summary': 'Temporary Event (Auto-deleted)',
+                'start': {
+                    'dateTime': datetime.utcnow().isoformat() + 'Z',
+                    'timeZone': 'UTC',
+                },
+                'end': {
+                    'dateTime': (datetime.utcnow() + timedelta(minutes=30)).isoformat() + 'Z',
+                    'timeZone': 'UTC',
+                },
+                'conferenceData': {
+                    'createRequest': {
+                        'requestId': f"temp-meet-{int(datetime.now().timestamp())}",
+                        'conferenceSolutionKey': {'type': 'hangoutsMeet'}
+                    }
+                }
+            }
+
+            # Create the event with conference data
+            event_result = self.service.events().insert(
+                calendarId=calendar_id,
+                body=temp_event,
+                conferenceDataVersion=1
+            ).execute()
+
+            # Extract Google Meet link
+            # Try hangoutLink first (simpler)
+            meet_link = event_result.get('hangoutLink')
+
+            # Fallback to conferenceData
+            if not meet_link and 'conferenceData' in event_result:
+                if 'entryPoints' in event_result['conferenceData']:
+                    for entry_point in event_result['conferenceData']['entryPoints']:
+                        if entry_point.get('entryPointType') == 'video':
+                            meet_link = entry_point.get('uri')
+                            break
+
+            # Delete the temporary event
+            event_id = event_result['id']
+            try:
+                self.service.events().delete(
+                    calendarId=calendar_id,
+                    eventId=event_id
+                ).execute()
+                logger.info(f"Temporary event deleted: {event_id}")
+            except HttpError as delete_error:
+                logger.warning(f"Failed to delete temporary event {event_id}: {delete_error}")
+
+            if meet_link:
+                logger.info(f"Created Google Meet link: {meet_link}")
+                return meet_link
+            else:
+                logger.warning("Event created but no Google Meet link returned")
+                return None
+
+        except HttpError as error:
+            logger.error(f"Failed to create Google Meet link: {error}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error creating Google Meet link: {e}")
+            return None
 
     def get_next_available_slots(self, count: int = 5, duration_minutes: int = 30) -> List[Dict]:
         """

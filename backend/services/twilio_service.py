@@ -167,8 +167,21 @@ class TwilioService:
 
         response.append(gather)
 
-        # If no response, repeat
-        response.say("I didn't hear anything. Goodbye!")
+        # If no response, add another Gather to give one more chance
+        gather_fallback = Gather(
+            input='speech',
+            action=f'{settings.api_base_url}/api/webhooks/twilio/process-speech',
+            method='POST',
+            language=tts_language,
+            speech_timeout='auto',
+            timeout=5
+        )
+        gather_fallback.say("I didn't hear anything. Are you there?", language=tts_language)
+        response.append(gather_fallback)
+
+        # Final fallback - end gracefully
+        response.say("I'm sorry, I couldn't reach you. I'll call you back later. Goodbye!", language=tts_language)
+        response.hangup()
 
         return str(response)
 
@@ -206,8 +219,21 @@ class TwilioService:
             gather.say(text, language=tts_language)
             response.append(gather)
 
-            # Fallback if no speech detected (keeps call alive and prompts user)
-            response.say("I didn't hear anything. Could you please speak?", language=tts_language)
+            # Fallback if no speech detected - add another Gather to keep call alive
+            gather_fallback = Gather(
+                input='speech',
+                action=f'{settings.api_base_url}/api/webhooks/twilio/process-speech',
+                method='POST',
+                language=tts_language,
+                speech_timeout='auto',
+                timeout=5
+            )
+            gather_fallback.say("I didn't hear anything. Could you please speak?", language=tts_language)
+            response.append(gather_fallback)
+
+            # Final fallback - if still no response, end gracefully
+            response.say("I'm sorry, I'm having trouble hearing you. I'll call you back later. Goodbye!", language=tts_language)
+            response.hangup()
         else:
             # End call
             response.say(text, language=tts_language)

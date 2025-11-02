@@ -77,7 +77,15 @@ class CalendarService:
                     str(service_account_path),
                     scopes=SCOPES
                 )
-                logger.info("✅ Service Account authentication successful")
+
+                # Enable Domain-Wide Delegation if configured
+                if settings.google_delegated_user_email:
+                    logger.info(f"Enabling Domain-Wide Delegation for {settings.google_delegated_user_email}")
+                    self.creds = self.creds.with_subject(settings.google_delegated_user_email)
+                    logger.info("✅ Service Account with Domain-Wide Delegation enabled")
+                else:
+                    logger.info("✅ Service Account authentication successful (no delegation)")
+
             except Exception as e:
                 logger.error(f"❌ Service Account authentication failed: {str(e)}")
                 return

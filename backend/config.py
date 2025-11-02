@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     google_calendar_credentials_file: str = "credentials.json"
     google_calendar_token_file: str = "token.json"
     google_calendar_id: str
+    google_delegated_user_email: Optional[str] = None  # For Domain-Wide Delegation
 
     # Email/SMTP (for sending calendar invites)
     smtp_host: str = "smtp.gmail.com"

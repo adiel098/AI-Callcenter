@@ -408,7 +408,7 @@ Google Calendar will automatically send the invitation and reminders.
             logger.info(f"Meeting booked successfully. Google Calendar sent invite to {args['guest_email']}")
             return {
                 "success": True,
-                "meeting_id": event_id,
+                "event_id": event_id,
                 "google_meet_link": google_meet_link,
                 "message": f"Meeting booked and calendar invite sent to {args['guest_email']}"
             }

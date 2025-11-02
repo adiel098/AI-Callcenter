@@ -2,9 +2,15 @@
 Database models
 """
 from .base import Base
-from .lead import Lead
-from .call import Call
-from .meeting import Meeting
-from .conversation_history import ConversationHistory
+from .lead import Lead, LeadStatus
+from .call import Call, CallOutcome
+from .meeting import Meeting, MeetingStatus
+from .conversation_history import ConversationHistory, SpeakerRole
 
-__all__ = ["Base", "Lead", "Call", "Meeting", "ConversationHistory"]
+__all__ = [
+    "Base",
+    "Lead", "LeadStatus",
+    "Call", "CallOutcome",
+    "Meeting", "MeetingStatus",
+    "ConversationHistory", "SpeakerRole"
+]

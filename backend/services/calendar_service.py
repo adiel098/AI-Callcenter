@@ -217,13 +217,13 @@ class CalendarService:
         calendar_id: str = None
     ) -> Optional[dict]:
         """
-        Create a meeting event in calendar
+        Create a meeting event in calendar and send invite to attendee
 
         Args:
             summary: Meeting title
             start_time: Meeting start time
             end_time: Meeting end time
-            attendee_email: Guest email address (not added to calendar, used for invite email)
+            attendee_email: Guest email address (added as attendee, receives Google Calendar invite)
             description: Meeting description
             calendar_id: Calendar ID (uses default if None)
 
@@ -232,9 +232,10 @@ class CalendarService:
             Example: {'event_id': 'abc123', 'google_meet_link': 'https://meet.google.com/xxx-yyyy-zzz'}
 
         Note:
-            Google Meet conference links are only created when using OAuth authentication
-            with personal calendars. Service accounts on group calendars don't support
-            conference data creation due to API limitations.
+            - Google Calendar automatically sends email invites to attendees
+            - Google Meet conference links are only created when using OAuth authentication
+              with personal calendars. Service accounts on group calendars don't support
+              conference data creation due to API limitations.
         """
         if not self.service:
             logger.error("Calendar service not initialized")
@@ -253,8 +254,10 @@ class CalendarService:
                 'dateTime': end_time.isoformat(),
                 'timeZone': 'UTC',
             },
-            # NOTE: 'attendees' field removed to avoid forbiddenForServiceAccounts error
-            # Calendar invites are now sent via EmailService with .ics attachments
+            # Add attendee so Google Calendar sends invite automatically
+            'attendees': [
+                {'email': attendee_email}
+            ],
             'reminders': {
                 'useDefault': False,
                 'overrides': [
@@ -282,7 +285,7 @@ class CalendarService:
             insert_params = {
                 'calendarId': calendar_id,
                 'body': event,
-                'sendUpdates': 'none'  # Changed from 'all' - invites sent via email service
+                'sendUpdates': 'all'  # Google Calendar sends invites to all attendees
             }
 
             if 'conferenceData' in event:

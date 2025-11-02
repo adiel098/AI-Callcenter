@@ -349,11 +349,10 @@ Google Calendar will automatically send the invitation and reminders.
 
     async def _book_meeting(self, args: Dict) -> Dict:
         """
-        Book a meeting on Google Calendar and send calendar invite via email.
+        Book a meeting on Google Calendar.
 
-        This method:
-        1. Creates calendar event (without attendees to avoid service account restriction)
-        2. Sends .ics calendar invite via email (works with any email provider)
+        This method creates a calendar event and adds the guest as an attendee.
+        Google Calendar automatically sends the invite email to the attendee.
 
         Args:
             args: Dictionary containing:
@@ -375,8 +374,6 @@ Google Calendar will automatically send the invitation and reminders.
             }
 
         try:
-            from backend.services.email_service import EmailService
-
             # Validate and parse datetime
             try:
                 meeting_datetime = datetime.fromisoformat(args["datetime"])
@@ -392,12 +389,13 @@ Google Calendar will automatically send the invitation and reminders.
             meeting_title = args.get("meeting_title", "Sales Meeting")
             meeting_description = args.get("description", f"Meeting with {args['guest_name']}")
 
-            # Create meeting via calendar service (without attendees field)
+            # Create meeting via calendar service
+            # Google Calendar automatically sends invite to the attendee
             result = self.calendar_service.create_meeting(
                 summary=meeting_title,
                 start_time=meeting_datetime,
                 end_time=end_time,
-                attendee_email=args["guest_email"],  # Not added to calendar, used for reference
+                attendee_email=args["guest_email"],
                 description=meeting_description
             )
 
@@ -407,46 +405,13 @@ Google Calendar will automatically send the invitation and reminders.
             event_id = result['event_id']
             google_meet_link = result.get('google_meet_link')
 
-            # Send calendar invite via email
-            try:
-                email_service = EmailService()
-                email_sent = email_service.send_calendar_invite(
-                    attendee_email=args["guest_email"],
-                    attendee_name=args["guest_name"],
-                    meeting_datetime=meeting_datetime,
-                    duration_minutes=duration,
-                    meeting_title=meeting_title,
-                    meeting_description=meeting_description,
-                    google_meet_link=google_meet_link
-                )
-
-                if email_sent:
-                    logger.info(f"Calendar invite emailed to {args['guest_email']}")
-                    return {
-                        "success": True,
-                        "meeting_id": event_id,
-                        "google_meet_link": google_meet_link,
-                        "message": f"Meeting booked and calendar invite sent to {args['guest_email']}"
-                    }
-                else:
-                    # Event created but email failed
-                    logger.warning(f"Event {event_id} created but failed to send email invite")
-                    return {
-                        "success": True,
-                        "meeting_id": event_id,
-                        "google_meet_link": google_meet_link,
-                        "warning": "Meeting created but failed to send email invitation"
-                    }
-
-            except Exception as email_error:
-                logger.error(f"Failed to send calendar invite email: {email_error}")
-                # Still return success since event was created
-                return {
-                    "success": True,
-                    "meeting_id": event_id,
-                    "google_meet_link": google_meet_link,
-                    "warning": f"Meeting created but email service failed: {str(email_error)}"
-                }
+            logger.info(f"Meeting booked successfully. Google Calendar sent invite to {args['guest_email']}")
+            return {
+                "success": True,
+                "meeting_id": event_id,
+                "google_meet_link": google_meet_link,
+                "message": f"Meeting booked and calendar invite sent to {args['guest_email']}"
+            }
 
         except Exception as e:
             logger.error(f"Meeting booking error: {e}")

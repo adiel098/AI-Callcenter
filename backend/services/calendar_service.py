@@ -194,7 +194,7 @@ class CalendarService:
         attendee_email: str,
         description: str = "",
         calendar_id: str = None
-    ) -> Optional[str]:
+    ) -> Optional[dict]:
         """
         Create a meeting event in calendar
 
@@ -202,12 +202,13 @@ class CalendarService:
             summary: Meeting title
             start_time: Meeting start time
             end_time: Meeting end time
-            attendee_email: Guest email address
+            attendee_email: Guest email address (not added to calendar, used for invite email)
             description: Meeting description
             calendar_id: Calendar ID (uses default if None)
 
         Returns:
-            Event ID if successful, None otherwise
+            dict with event_id and google_meet_link if successful, None otherwise
+            Example: {'event_id': 'abc123', 'google_meet_link': 'https://meet.google.com/xxx-yyyy-zzz'}
         """
         if not self.service:
             logger.error("Calendar service not initialized")
@@ -226,9 +227,8 @@ class CalendarService:
                 'dateTime': end_time.isoformat(),
                 'timeZone': 'UTC',
             },
-            'attendees': [
-                {'email': attendee_email},
-            ],
+            # NOTE: 'attendees' field removed to avoid forbiddenForServiceAccounts error
+            # Calendar invites are now sent via EmailService with .ics attachments
             'reminders': {
                 'useDefault': False,
                 'overrides': [
@@ -249,12 +249,25 @@ class CalendarService:
                 calendarId=calendar_id,
                 body=event,
                 conferenceDataVersion=1,
-                sendUpdates='all'  # Send email invitations
+                sendUpdates='none'  # Changed from 'all' - invites sent via email service
             ).execute()
 
             event_id = event_result['id']
-            logger.info(f"Meeting created: {event_id} at {start_time}")
-            return event_id
+
+            # Extract Google Meet link if available
+            google_meet_link = None
+            if 'conferenceData' in event_result and 'entryPoints' in event_result['conferenceData']:
+                for entry_point in event_result['conferenceData']['entryPoints']:
+                    if entry_point.get('entryPointType') == 'video':
+                        google_meet_link = entry_point.get('uri')
+                        break
+
+            logger.info(f"Meeting created: {event_id} at {start_time}, Meet link: {google_meet_link}")
+
+            return {
+                'event_id': event_id,
+                'google_meet_link': google_meet_link
+            }
 
         except HttpError as error:
             logger.error(f"Failed to create meeting: {error}")

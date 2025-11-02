@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     google_calendar_token_file: str = "token.json"
     google_calendar_id: str
 
+    # Email/SMTP (for sending calendar invites)
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str
+    smtp_password: str
+    company_name: str = "Alta AI"
+
     # Application
     api_base_url: str = "http://localhost:8000"
     frontend_url: str = "http://localhost:5173"

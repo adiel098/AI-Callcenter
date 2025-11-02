@@ -27,6 +27,7 @@ python-dotenv==1.0.0
 pydantic==2.10.6
 pydantic-settings==2.7.1
 httpx==0.26.0
+icalendar==5.0.11
 
 # Monitoring
 sentry-sdk[fastapi]==1.40.0

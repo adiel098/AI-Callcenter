@@ -664,29 +664,95 @@ If you have a Google Workspace organization with admin access:
 
 4. **Restart application and test**
 
-**Solution C: Workaround - Events Without Attendees**
+**Solution C: .ics Email Attachment** ⭐ **PRODUCTION SOLUTION - NOW IMPLEMENTED**
 
-Quick workaround if you want to keep service account:
+This system now automatically sends calendar invites as .ics email attachments, which works with service accounts and all email providers!
 
-1. **Modify calendar service to not add attendees:**
-   - Edit `backend/services/calendar_service.py`
-   - Remove or comment out the `attendees` field in event creation
-   - Send meeting details via email separately using `email_service.py`
+**How it works:**
+1. Calendar event created on Google Calendar (without attendees field)
+2. .ics calendar file automatically generated
+3. Email sent to guest with .ics attachment
+4. Guest clicks "Add to Calendar" to import the event
 
-2. **Trade-offs:**
-   - ❌ No automatic calendar invites to guests
-   - ❌ Guests won't see event in their calendar
-   - ✅ Works immediately without additional setup
-   - ✅ Can still send email confirmations
+**Supported Email Providers:**
+- ✅ Gmail
+- ✅ Outlook/Office 365
+- ✅ Yahoo Mail
+- ✅ Apple Mail
+- ✅ Corporate email systems
+- ✅ Any email client that supports .ics files
+
+**Setup Instructions:**
+
+1. **Configure SMTP in `.env` file:**
+
+   For Gmail (Development):
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your_business_email@gmail.com
+   SMTP_PASSWORD=your_gmail_app_password
+   COMPANY_NAME=Your Company Name
+   ```
+
+   Generate Gmail App Password: https://myaccount.google.com/apppasswords
+
+   For SendGrid (Production):
+   ```env
+   SMTP_HOST=smtp.sendgrid.net
+   SMTP_PORT=587
+   SMTP_USER=apikey
+   SMTP_PASSWORD=your_sendgrid_api_key
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+
+3. **Test email service:**
+   ```python
+   from backend.services.email_service import EmailService
+   from datetime import datetime, timedelta
+
+   email_service = EmailService()
+
+   # Test sending calendar invite
+   success = email_service.send_calendar_invite(
+       attendee_email="test@example.com",
+       attendee_name="Test User",
+       meeting_datetime=datetime.now() + timedelta(days=1),
+       duration_minutes=30,
+       meeting_title="Test Meeting",
+       google_meet_link="https://meet.google.com/xxx-yyyy-zzz"
+   )
+
+   print(f"Email sent: {success}")
+   ```
+
+4. **Restart your application:**
+   ```bash
+   # The system will now automatically send .ics invites
+   uvicorn backend.main:app --reload --port 8000
+   ```
+
+**Features:**
+- ✅ Professional HTML emails with meeting details
+- ✅ .ics calendar file attachment
+- ✅ Includes Google Meet links
+- ✅ Works with service accounts (no OAuth needed)
+- ✅ Fully automated - no manual intervention
+- ✅ Recipient gets standard "Add to Calendar" experience
 
 **Which Solution to Choose:**
 
 | Your Situation | Recommended Solution |
 |----------------|---------------------|
-| Personal Gmail account | **Solution A** (OAuth) |
+| Production system (any email domain) | **Solution C** (.ics Email) - **IMPLEMENTED** |
+| Personal Gmail account | **Solution A** (OAuth) OR **Solution C** |
 | Google Workspace + Admin access | **Solution B** (Domain-Wide Delegation) |
-| Google Workspace + No admin access | **Solution A** (OAuth) |
-| Quick testing/development | **Solution C** (Workaround) |
+| Google Workspace + No admin access | **Solution A** (OAuth) OR **Solution C** |
+| Quick testing/development | **Solution C** (.ics Email) - **READY TO USE** |
 
 #### Error: `404 Not Found` or `Calendar not found`
 ```
@@ -822,7 +888,7 @@ AI conversation completes but no meeting appears on calendar.
 | Error Code | Error Message | Quick Fix |
 |------------|--------------|-----------|
 | **403** | `accessNotConfigured` | Enable Google Calendar API in Google Cloud Console |
-| **403** | `forbiddenForServiceAccounts` | Switch to OAuth authentication OR enable Domain-Wide Delegation |
+| **403** | `forbiddenForServiceAccounts` | Use .ics email invites (now implemented) OR switch to OAuth |
 | **404** | `Calendar not found` | Verify calendar ID and sharing permissions |
 | **401** | `Invalid credentials` | Check credentials file path and validity |
 | **400** | `Bad Request` | Check date/time format and timezone |

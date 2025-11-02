@@ -114,4 +114,26 @@ export const clearSettingsCache = async () => {
   return response.data
 }
 
+// Voice Settings
+export const getAvailableVoices = async () => {
+  const response = await api.get('/settings/voices')
+  return response.data
+}
+
+export const getDefaultVoice = async () => {
+  const response = await api.get('/settings/voice')
+  return response.data
+}
+
+export const updateDefaultVoice = async (voiceId: string, voiceName: string) => {
+  const response = await api.put('/settings/voice', { voice_id: voiceId, voice_name: voiceName })
+  return response.data
+}
+
+// Voice Analytics
+export const getVoicePerformance = async () => {
+  const response = await api.get('/analytics/voice-performance')
+  return response.data
+}
+
 export default api

@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Settings as SettingsIcon, Save, RotateCcw, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Save, RotateCcw, Loader2, Mic } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getSystemPrompt, updateSystemPrompt, getDefaultSystemPrompt } from '../services/api';
+import { getSystemPrompt, updateSystemPrompt, getDefaultSystemPrompt, getAvailableVoices, getDefaultVoice, updateDefaultVoice } from '../services/api';
 
 export default function Settings() {
   const queryClient = useQueryClient();
   const [promptValue, setPromptValue] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+
+  // Voice settings state
+  const [selectedVoice, setSelectedVoice] = useState<{ id: string; name: string } | null>(null);
+  const [voiceDirty, setVoiceDirty] = useState(false);
 
   // Fetch current system prompt
   const { data: currentPrompt, isLoading } = useQuery({
@@ -21,6 +25,18 @@ export default function Settings() {
   const { data: defaultPrompt } = useQuery({
     queryKey: ['defaultSystemPrompt'],
     queryFn: getDefaultSystemPrompt,
+  });
+
+  // Fetch available voices
+  const { data: availableVoices, isLoading: voicesLoading } = useQuery({
+    queryKey: ['availableVoices'],
+    queryFn: getAvailableVoices,
+  });
+
+  // Fetch current default voice
+  const { data: currentVoice } = useQuery({
+    queryKey: ['defaultVoice'],
+    queryFn: getDefaultVoice,
   });
 
   // Update prompt mutation
@@ -41,6 +57,24 @@ export default function Settings() {
     },
   });
 
+  // Update voice mutation
+  const updateVoiceMutation = useMutation({
+    mutationFn: ({ voiceId, voiceName }: { voiceId: string; voiceName: string }) =>
+      updateDefaultVoice(voiceId, voiceName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['defaultVoice'] });
+      setVoiceDirty(false);
+      toast.success('Voice updated successfully', {
+        description: 'Changes will apply to new calls immediately',
+      });
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update voice', {
+        description: error.response?.data?.detail || error.message,
+      });
+    },
+  });
+
   // Initialize prompt value when data loads
   useEffect(() => {
     if (currentPrompt?.value) {
@@ -50,6 +84,13 @@ export default function Settings() {
       }
     }
   }, [currentPrompt]);
+
+  // Initialize voice selection when data loads
+  useEffect(() => {
+    if (currentVoice?.voice_id && currentVoice?.voice_name) {
+      setSelectedVoice({ id: currentVoice.voice_id, name: currentVoice.voice_name });
+    }
+  }, [currentVoice]);
 
   const handleSave = () => {
     if (!promptValue.trim()) {
@@ -73,6 +114,20 @@ export default function Settings() {
   const handleChange = (value: string) => {
     setPromptValue(value);
     setIsDirty(value !== currentPrompt?.value);
+  };
+
+  const handleVoiceChange = (voiceId: string) => {
+    const voice = availableVoices?.find((v: any) => v.voice_id === voiceId);
+    if (voice) {
+      setSelectedVoice({ id: voice.voice_id, name: voice.name });
+      setVoiceDirty(voice.voice_id !== currentVoice?.voice_id);
+    }
+  };
+
+  const handleSaveVoice = () => {
+    if (selectedVoice) {
+      updateVoiceMutation.mutate({ voiceId: selectedVoice.id, voiceName: selectedVoice.name });
+    }
   };
 
   const characterCount = promptValue.length;
@@ -193,6 +248,85 @@ export default function Settings() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Voice Settings Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mt-6">
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <Mic className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Voice Settings
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Select the default voice for all outbound calls
+                </p>
+              </div>
+            </div>
+
+            {voicesLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Default Voice
+                  </label>
+                  <select
+                    value={selectedVoice?.id || ''}
+                    onChange={(e) => handleVoiceChange(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-900 dark:text-gray-100"
+                  >
+                    <option value="">Use language-based default</option>
+                    {availableVoices?.map((voice: any) => (
+                      <option key={voice.voice_id} value={voice.voice_id}>
+                        {voice.name}
+                      </option>
+                    ))}
+                  </select>
+                  {voiceDirty && (
+                    <p className="mt-2 text-sm text-amber-500 dark:text-amber-400">
+                      Unsaved changes
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                    About Voice Selection
+                  </h3>
+                  <p className="text-sm text-purple-800 dark:text-purple-200">
+                    If no default voice is set, the system will automatically select a voice based on the lead's country code. You can override this by selecting a specific voice here.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={handleSaveVoice}
+                    disabled={!voiceDirty || updateVoiceMutation.isPending}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {updateVoiceMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save Voice
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

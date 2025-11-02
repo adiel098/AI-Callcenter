@@ -240,18 +240,17 @@ class CalendarService:
             start_time: Meeting start time
             end_time: Meeting end time
             attendee_email: Guest email address (added as attendee, receives Google Calendar invite)
-            description: Meeting description
+            description: Meeting description (can include Zoom link)
             calendar_id: Calendar ID (uses default if None)
 
         Returns:
-            dict with event_id and google_meet_link if successful, None otherwise
-            Example: {'event_id': 'abc123', 'google_meet_link': 'https://meet.google.com/xxx-yyyy-zzz'}
+            dict with event_id if successful, None otherwise
+            Example: {'event_id': 'abc123'}
 
         Note:
             - Google Calendar automatically sends email invites to attendees
-            - Google Meet conference links are only created when using OAuth authentication
-              with personal calendars. Service accounts on group calendars don't support
-              conference data creation due to API limitations.
+            - Video conferencing is handled via Zoom integration (not Google Meet)
+            - Zoom link should be included in the description parameter
         """
         if not self.service:
             logger.error("Calendar service not initialized")
@@ -280,51 +279,25 @@ class CalendarService:
             }
         }
 
-        # Only add Google Meet conference data for OAuth authentication
-        # Service accounts on group calendars don't support conference creation
-        if not self._is_service_account():
-            event['conferenceData'] = {
-                'createRequest': {
-                    'requestId': f"meeting-{int(datetime.now().timestamp())}",
-                    'conferenceSolutionKey': {'type': 'hangoutsMeet'}
-                }
-            }
-            logger.info("Adding Google Meet conference data (OAuth authentication)")
-        else:
-            logger.info("Skipping conference data (Service Account mode - not supported on group calendars)")
+        # Video conferencing handled via Zoom (not Google Meet)
+        # Zoom link is included in the description field
 
         try:
-            # Only include conferenceDataVersion if conference data is present
+            # Create calendar event (video link handled separately via Zoom)
             insert_params = {
                 'calendarId': calendar_id,
                 'body': event,
                 'sendUpdates': 'none'  # No attendees, so no updates to send
             }
 
-            if 'conferenceData' in event:
-                insert_params['conferenceDataVersion'] = 1
-
             event_result = self.service.events().insert(**insert_params).execute()
 
             event_id = event_result['id']
 
-            # Extract Google Meet link if available
-            # Try hangoutLink first (simpler and more reliable)
-            google_meet_link = event_result.get('hangoutLink')
-
-            # Fallback to conferenceData if hangoutLink not present
-            if not google_meet_link and 'conferenceData' in event_result:
-                if 'entryPoints' in event_result['conferenceData']:
-                    for entry_point in event_result['conferenceData']['entryPoints']:
-                        if entry_point.get('entryPointType') == 'video':
-                            google_meet_link = entry_point.get('uri')
-                            break
-
-            logger.info(f"Meeting created: {event_id} at {start_time}, Meet link: {google_meet_link}")
+            logger.info(f"Meeting created: {event_id} at {start_time}")
 
             return {
-                'event_id': event_id,
-                'google_meet_link': google_meet_link
+                'event_id': event_id
             }
 
         except HttpError as error:
@@ -416,84 +389,16 @@ class CalendarService:
 
     def create_google_meet_link(self) -> Optional[str]:
         """
-        Create a standalone Google Meet link by creating a temporary calendar event
+        DEPRECATED: Google Meet integration has been replaced with Zoom.
 
-        This creates a calendar event with conferenceData, extracts the Meet link,
-        then deletes the event. Works with both OAuth and Service Accounts.
+        This method is no longer used and always returns None.
+        Use ZoomService.create_meeting() instead for video conferencing.
 
         Returns:
-            Google Meet link (e.g., 'https://meet.google.com/abc-defg-hij') or None if failed
+            None (deprecated - use Zoom instead)
         """
-        try:
-            # Service accounts on group calendars cannot create conference data
-            if self._is_service_account():
-                logger.warning("Service accounts cannot create Google Meet links on group calendars")
-                return None
-
-            calendar_id = settings.google_calendar_id or 'primary'
-
-            # Create a temporary event with Google Meet conference
-            temp_event = {
-                'summary': 'Temporary Event (Auto-deleted)',
-                'start': {
-                    'dateTime': datetime.utcnow().isoformat() + 'Z',
-                    'timeZone': 'UTC',
-                },
-                'end': {
-                    'dateTime': (datetime.utcnow() + timedelta(minutes=30)).isoformat() + 'Z',
-                    'timeZone': 'UTC',
-                },
-                'conferenceData': {
-                    'createRequest': {
-                        'requestId': f"temp-meet-{int(datetime.now().timestamp())}",
-                        'conferenceSolutionKey': {'type': 'hangoutsMeet'}
-                    }
-                }
-            }
-
-            # Create the event with conference data
-            event_result = self.service.events().insert(
-                calendarId=calendar_id,
-                body=temp_event,
-                conferenceDataVersion=1
-            ).execute()
-
-            # Extract Google Meet link
-            # Try hangoutLink first (simpler)
-            meet_link = event_result.get('hangoutLink')
-
-            # Fallback to conferenceData
-            if not meet_link and 'conferenceData' in event_result:
-                if 'entryPoints' in event_result['conferenceData']:
-                    for entry_point in event_result['conferenceData']['entryPoints']:
-                        if entry_point.get('entryPointType') == 'video':
-                            meet_link = entry_point.get('uri')
-                            break
-
-            # Delete the temporary event
-            event_id = event_result['id']
-            try:
-                self.service.events().delete(
-                    calendarId=calendar_id,
-                    eventId=event_id
-                ).execute()
-                logger.info(f"Temporary event deleted: {event_id}")
-            except HttpError as delete_error:
-                logger.warning(f"Failed to delete temporary event {event_id}: {delete_error}")
-
-            if meet_link:
-                logger.info(f"Created Google Meet link: {meet_link}")
-                return meet_link
-            else:
-                logger.warning("Event created but no Google Meet link returned")
-                return None
-
-        except HttpError as error:
-            logger.error(f"Failed to create Google Meet link: {error}")
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error creating Google Meet link: {e}")
-            return None
+        logger.warning("create_google_meet_link() is deprecated - use Zoom integration instead")
+        return None
 
     def get_next_available_slots(self, count: int = 5, duration_minutes: int = 30) -> List[Dict]:
         """

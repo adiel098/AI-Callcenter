@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from backend.workers.celery_app import celery_app
 from backend.database import get_db_context
-from backend.models import Lead, Call, CallOutcome, LeadStatus, Meeting, MeetingStatus, ConversationHistory, SpeakerRole
+from backend.models import Lead, Call, CallOutcome, LeadStatus, Meeting, MeetingStatus, ConversationHistory, SpeakerRole, Setting
 from backend.services import TwilioService, SpeechService, CalendarService
 from backend.services.llm_service import LLMService, ConversationIntent
 from backend.services.zoom_service import ZoomService
@@ -104,10 +104,24 @@ def initiate_call(self, lead_id: int):
             # Update lead status
             lead.status = LeadStatus.CALLING
 
+            # Fetch default voice settings (if set)
+            voice_id_setting = db.query(Setting).filter(Setting.key == "default_voice_id").first()
+            voice_name_setting = db.query(Setting).filter(Setting.key == "default_voice_name").first()
+
+            voice_id = voice_id_setting.value if voice_id_setting else None
+            voice_name = voice_name_setting.value if voice_name_setting else None
+
+            if voice_id:
+                logger.info(f"[VOICE] Using default voice: {voice_name} ({voice_id})")
+            else:
+                logger.info(f"[VOICE] No default voice set, will use language-based selection")
+
             # Create call record (no outcome set yet - will be set during/after call)
             call = Call(
                 lead_id=lead.id,
                 language=lead.language,
+                voice_id=voice_id,
+                voice_name=voice_name,
                 outcome=None
             )
             db.add(call)

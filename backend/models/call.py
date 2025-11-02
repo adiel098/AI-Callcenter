@@ -40,6 +40,8 @@ class Call(Base):
     summary = Column(Text, nullable=True)  # AI-generated call summary (3-4 sentences)
     duration = Column(Float, nullable=True)  # Duration in seconds
     language = Column(String(10), nullable=True)  # Language used in call
+    voice_id = Column(String(255), nullable=True)  # ElevenLabs voice ID used for TTS
+    voice_name = Column(String(255), nullable=True)  # Human-readable voice name
     outcome = Column(
         Enum(CallOutcome),
         nullable=True,  # Nullable - set during/after call based on conversation

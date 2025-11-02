@@ -36,6 +36,15 @@ class LanguageStats(BaseModel):
     count: int
 
 
+class VoicePerformanceStats(BaseModel):
+    voice_id: str
+    voice_name: str
+    total_calls: int
+    meetings_booked: int
+    conversion_rate: float
+    avg_duration: float
+
+
 @router.get("/overview", response_model=AnalyticsOverview)
 async def get_analytics_overview(db: Session = Depends(get_db)):
     """Get overall analytics overview"""
@@ -310,4 +319,58 @@ async def get_active_campaigns(db: Session = Depends(get_db)):
 
     except Exception as e:
         logger.error(f"Failed to get active campaigns: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/voice-performance", response_model=list[VoicePerformanceStats])
+async def get_voice_performance(db: Session = Depends(get_db)):
+    """
+    Get voice performance statistics.
+
+    Returns performance metrics for each voice used in calls:
+    - Total calls made with each voice
+    - Meetings successfully booked
+    - Conversion rate (meetings/calls)
+    - Average call duration
+    """
+    try:
+        # Query calls grouped by voice_id
+        # Only include calls that have a voice_id set
+        voice_stats = db.query(
+            Call.voice_id,
+            Call.voice_name,
+            func.count(Call.id).label('total_calls'),
+            func.count(Meeting.id).label('meetings_booked'),
+            func.avg(Call.duration).label('avg_duration')
+        ).outerjoin(
+            Meeting, Call.id == Meeting.call_id
+        ).filter(
+            Call.voice_id.isnot(None)
+        ).group_by(
+            Call.voice_id,
+            Call.voice_name
+        ).all()
+
+        results = []
+        for stat in voice_stats:
+            conversion_rate = (stat.meetings_booked / stat.total_calls * 100) if stat.total_calls > 0 else 0.0
+            avg_duration = float(stat.avg_duration) if stat.avg_duration else 0.0
+
+            results.append(VoicePerformanceStats(
+                voice_id=stat.voice_id,
+                voice_name=stat.voice_name or "Unknown",
+                total_calls=stat.total_calls,
+                meetings_booked=stat.meetings_booked,
+                conversion_rate=round(conversion_rate, 2),
+                avg_duration=round(avg_duration, 2)
+            ))
+
+        # Sort by total calls (most used voices first)
+        results.sort(key=lambda x: x.total_calls, reverse=True)
+
+        logger.info(f"Voice performance stats retrieved: {len(results)} voices")
+        return results
+
+    except Exception as e:
+        logger.error(f"Failed to get voice performance: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

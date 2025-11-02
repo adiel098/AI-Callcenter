@@ -1,7 +1,7 @@
 """
 Lead model - represents potential clients to call
 """
-from sqlalchemy import Column, Integer, String, DateTime, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -31,6 +31,7 @@ class Lead(Base):
     email = Column(String(255), nullable=True)
     country_code = Column(String(10), nullable=True)  # e.g., +972, +1
     language = Column(String(10), nullable=True)  # e.g., he, en, fr
+    partner_id = Column(Integer, ForeignKey("partners.id"), nullable=True, index=True)  # API partner who submitted this lead
     status = Column(
         Enum(LeadStatus),
         default=LeadStatus.PENDING,
@@ -45,6 +46,7 @@ class Lead(Base):
     )
 
     # Relationships
+    partner = relationship("Partner", back_populates="leads")
     calls = relationship("Call", back_populates="lead", cascade="all, delete-orphan")
     meetings = relationship("Meeting", back_populates="lead", cascade="all, delete-orphan")
 

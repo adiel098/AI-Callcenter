@@ -492,21 +492,22 @@ Google Calendar will automatically send the invitation and reminders.
                 return {"success": False, "error": "Failed to create calendar event"}
 
             event_id = result['event_id']
-            google_meet_link = result.get('google_meet_link')
 
             logger.info("✅ MEETING BOOKED SUCCESSFULLY!")
             logger.info(f"   - Event ID: {event_id}")
-            logger.info(f"   - Google Meet Link: {google_meet_link or 'N/A'}")
             logger.info(f"   - Zoom Link: {zoom_link or 'N/A'}")
             logger.info(f"   - Calendar invite automatically sent to: {args['guest_email']}")
             logger.info("=" * 80)
 
+            # Determine final video link (Zoom only)
+            video_link = zoom_link
+
             return {
                 "success": True,
                 "event_id": event_id,
-                "google_meet_link": google_meet_link,
                 "zoom_link": zoom_link,
-                "message": f"Meeting booked and calendar invite sent to {args['guest_email']}"
+                "video_link": video_link,  # Generic field for video conferencing
+                "message": f"Meeting booked{' with Zoom link' if zoom_link else ''} and calendar invite sent to {args['guest_email']}"
             }
 
         except Exception as e:

@@ -199,7 +199,7 @@ async def get_recent_activity(limit: int = 10, db: Session = Depends(get_db)):
         for call in recent_calls:
             if call.started_at:
                 # Determine status based on outcome
-                status = "success" if call.outcome == CallOutcome.MEETING_BOOKED else "error" if call.outcome in [CallOutcome.NO_ANSWER, CallOutcome.VOICEMAIL, CallOutcome.DECLINED] else "info"
+                status = "success" if call.outcome == CallOutcome.MEETING_SCHEDULED else "error" if call.outcome in [CallOutcome.NO_ANSWER, CallOutcome.VOICEMAIL, CallOutcome.NOT_INTERESTED] else "info"
 
                 # Create description based on outcome
                 description = call.summary[:100] if call.summary else (call.outcome.value.replace('_', ' ').title() if call.outcome else "Unknown outcome")

@@ -132,6 +132,45 @@ export default function Settings() {
     }
   };
 
+  const handlePlayVoice = async (voiceId: string) => {
+    try {
+      // Stop current audio if playing
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+
+      // If clicking the same voice, stop it
+      if (playingVoiceId === voiceId) {
+        setPlayingVoiceId(null);
+        return;
+      }
+
+      // Set as playing (loading state)
+      setPlayingVoiceId(voiceId);
+
+      // Create audio element from API endpoint
+      const audio = new Audio(`/api/settings/voices/preview/${voiceId}`);
+
+      audio.onended = () => {
+        setPlayingVoiceId(null);
+      };
+
+      audio.onerror = () => {
+        setPlayingVoiceId(null);
+        toast.error('Failed to play voice preview');
+      };
+
+      setAudioElement(audio);
+      await audio.play();
+
+    } catch (error) {
+      console.error('Error playing voice:', error);
+      setPlayingVoiceId(null);
+      toast.error('Failed to play voice preview');
+    }
+  };
+
   const characterCount = promptValue.length;
 
   return (
@@ -277,21 +316,74 @@ export default function Settings() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Default Voice
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Select Default Voice
                   </label>
-                  <select
-                    value={selectedVoice?.id || ''}
-                    onChange={(e) => handleVoiceChange(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-900 dark:text-gray-100"
-                  >
-                    <option value="">Use language-based default</option>
+
+                  {/* Voice List */}
+                  <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                    {/* Language-based default option */}
+                    <button
+                      onClick={() => {
+                        setSelectedVoice(null);
+                        setVoiceDirty(currentVoice?.voice_id !== null);
+                      }}
+                      className={`w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                        !selectedVoice
+                          ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500'
+                          : 'border-l-4 border-transparent'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          Language-Based Default
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Auto-select voice based on lead's country
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Available voices */}
                     {availableVoices?.map((voice: any) => (
-                      <option key={voice.voice_id} value={voice.voice_id}>
-                        {voice.name}
-                      </option>
+                      <div
+                        key={voice.voice_id}
+                        className={`flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
+                          selectedVoice?.id === voice.voice_id
+                            ? 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500'
+                            : 'border-l-4 border-transparent'
+                        }`}
+                      >
+                        <button
+                          onClick={() => handleVoiceChange(voice.voice_id)}
+                          className="flex-1 px-4 py-3 text-left"
+                        >
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {voice.name}
+                          </div>
+                          {voice.labels && Object.keys(voice.labels).length > 0 && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {Object.entries(voice.labels).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Play/Stop button */}
+                        <button
+                          onClick={() => handlePlayVoice(voice.voice_id)}
+                          className="ml-3 mr-4 p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                          title="Preview voice"
+                        >
+                          {playingVoiceId === voice.voice_id ? (
+                            <StopCircle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          ) : (
+                            <Play className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          )}
+                        </button>
+                      </div>
                     ))}
-                  </select>
+                  </div>
+
                   {voiceDirty && (
                     <p className="mt-2 text-sm text-amber-500 dark:text-amber-400">
                       Unsaved changes

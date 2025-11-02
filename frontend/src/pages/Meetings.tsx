@@ -13,8 +13,6 @@ import { EmptyState } from '@/components/EmptyState';
 import {
   Calendar as CalendarIcon,
   Clock,
-  Video,
-  MapPin,
   Plus,
   ExternalLink,
   User,
@@ -26,15 +24,16 @@ import { format, addDays, isSameDay } from 'date-fns';
 
 interface Meeting {
   id: number;
+  lead_id: number;
   lead_name: string;
   email: string;
   scheduled_at: string;
-  duration: number;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  meeting_type: 'phone' | 'video' | 'in_person';
+  duration: number | null;
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   meeting_link?: string;
-  location?: string;
   notes?: string;
+  calendar_event_id?: string;
+  call_id?: number;
 }
 
 const statusConfig = {
@@ -42,12 +41,7 @@ const statusConfig = {
   confirmed: { label: 'Confirmed', color: 'bg-green-100 text-green-800' },
   completed: { label: 'Completed', color: 'bg-gray-100 text-gray-800' },
   cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800' },
-};
-
-const typeConfig = {
-  phone: { icon: CalendarIcon, label: 'Phone Call' },
-  video: { icon: Video, label: 'Video Call' },
-  in_person: { icon: MapPin, label: 'In Person' },
+  no_show: { label: 'No Show', color: 'bg-orange-100 text-orange-800' },
 };
 
 export default function Meetings() {
@@ -102,26 +96,11 @@ export default function Meetings() {
       accessorKey: 'duration',
       header: 'Duration',
       cell: ({ row }) => {
-        const duration = row.getValue('duration') as number;
+        const duration = row.getValue('duration') as number | null;
         return (
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
-            <span>{duration} min</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'meeting_type',
-      header: 'Type',
-      cell: ({ row }) => {
-        const type = row.getValue('meeting_type') as keyof typeof typeConfig;
-        const config = typeConfig[type];
-        const Icon = config.icon;
-        return (
-          <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            <span>{config.label}</span>
+            <span>{duration || 30} min</span>
           </div>
         );
       },
@@ -253,7 +232,6 @@ export default function Meetings() {
                 ) : (
                   <div className="space-y-3">
                     {meetingsOnSelectedDate.map((meeting) => {
-                      const Icon = typeConfig[meeting.meeting_type].icon;
                       return (
                         <motion.div
                           key={meeting.id}
@@ -266,7 +244,7 @@ export default function Meetings() {
                               <p className="text-sm font-medium">{meeting.lead_name}</p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Clock className="h-3 w-3" />
-                                {format(new Date(meeting.scheduled_at), 'h:mm a')}
+                                {format(new Date(meeting.scheduled_at), 'h:mm a')} • {meeting.duration || 30} min
                               </div>
                             </div>
                             <Badge
@@ -278,10 +256,6 @@ export default function Meetings() {
                             >
                               {statusConfig[meeting.status].label}
                             </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Icon className="h-3 w-3" />
-                            {typeConfig[meeting.meeting_type].label}
                           </div>
                           {meeting.meeting_link && (
                             <Button variant="outline" size="sm" className="w-full" asChild>
@@ -315,7 +289,6 @@ export default function Meetings() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             {meetings.slice(0, 3).map((meeting) => {
-              const Icon = typeConfig[meeting.meeting_type].icon;
               return (
                 <motion.div
                   key={meeting.id}
@@ -329,7 +302,7 @@ export default function Meetings() {
                       <p className="font-medium">{meeting.lead_name}</p>
                       <p className="text-xs text-muted-foreground">{meeting.email}</p>
                     </div>
-                    <Icon className="h-5 w-5 text-muted-foreground" />
+                    <CalendarIcon className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -338,7 +311,7 @@ export default function Meetings() {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      {format(new Date(meeting.scheduled_at), 'h:mm a')} • {meeting.duration} min
+                      {format(new Date(meeting.scheduled_at), 'h:mm a')} • {meeting.duration || 30} min
                     </div>
                   </div>
                   <Badge
@@ -347,6 +320,18 @@ export default function Meetings() {
                   >
                     {statusConfig[meeting.status].label}
                   </Badge>
+                  {meeting.meeting_link && (
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <a
+                        href={meeting.meeting_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Join
+                      </a>
+                    </Button>
+                  )}
                 </motion.div>
               );
             })}

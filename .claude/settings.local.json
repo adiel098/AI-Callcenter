@@ -30,7 +30,9 @@
       "Bash(timeout 5 bash -c 'while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done && echo \"\"Backend is ready\"\"')",
       "Bash(curl:*)",
       "Bash(findstr:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(Select-String -Pattern \"Test Summary|PASSED|FAILED|Total:|SUCCESS|WARNING|===|PASS|FAIL\")",
+      "Bash(timeout 10 bash:*)"
     ],
     "deny": [],
     "ask": []

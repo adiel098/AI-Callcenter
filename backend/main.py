@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import sentry_sdk
 
-from backend.config import get_settings
-from backend.database import init_db
-from backend.api.routes import leads, calls, meetings, campaigns, analytics, webhooks
+from config import get_settings
+from database import init_db
+from api.routes import leads, calls, meetings, campaigns, analytics, webhooks
 
 # Configure logging
 logging.basicConfig(
@@ -81,7 +81,7 @@ async def readiness_check():
     """Readiness check endpoint"""
     # Check database connection
     try:
-        from backend.database import get_db_context
+        from database import get_db_context
         with get_db_context() as db:
             # Simple query to check connection
             db.execute("SELECT 1")

@@ -8,8 +8,8 @@ from pydantic import BaseModel
 import logging
 from datetime import datetime, timedelta
 
-from backend.database import get_db
-from backend.models import Lead, Call, Meeting, CallOutcome, LeadStatus, MeetingStatus
+from database import get_db
+from models import Lead, Call, Meeting, CallOutcome, LeadStatus, MeetingStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

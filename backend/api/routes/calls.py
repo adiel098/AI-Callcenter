@@ -7,8 +7,8 @@ from typing import List, Optional
 from pydantic import BaseModel
 import logging
 
-from backend.database import get_db
-from backend.models import Call, CallOutcome, ConversationHistory, SpeakerRole
+from database import get_db
+from models import Call, CallOutcome, ConversationHistory, SpeakerRole
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

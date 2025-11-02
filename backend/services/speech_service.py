@@ -2,7 +2,7 @@
 Speech services for STT (Deepgram) and TTS (ElevenLabs)
 """
 from deepgram import DeepgramClient, PrerecordedOptions, FileSource
-from elevenlabs.client import ElevenLabs
+import elevenlabs
 from elevenlabs import Voice, VoiceSettings
 import httpx
 import logging
@@ -23,8 +23,8 @@ class SpeechService:
         # Initialize Deepgram client (v3 SDK)
         self.deepgram_client = DeepgramClient(settings.deepgram_api_key)
 
-        # Initialize ElevenLabs client
-        self.elevenlabs_client = ElevenLabs(api_key=settings.elevenlabs_api_key)
+        # Initialize ElevenLabs API key
+        elevenlabs.set_api_key(settings.elevenlabs_api_key)
 
     async def transcribe_audio(
         self,
@@ -122,18 +122,16 @@ class SpeechService:
             logger.info(f"Synthesizing speech ({language}): {text[:50]}...")
 
             # Generate audio using ElevenLabs
-            audio_generator = self.elevenlabs_client.generate(
+            audio_generator = elevenlabs.generate(
                 text=text,
-                voice=Voice(
-                    voice_id=voice_id,
-                    settings=VoiceSettings(
-                        stability=0.5,
-                        similarity_boost=0.75,
-                        style=0.0,
-                        use_speaker_boost=True
-                    )
-                ),
-                model="eleven_multilingual_v2"  # Supports multiple languages
+                voice=voice_id,
+                model="eleven_multilingual_v2",  # Supports multiple languages
+                settings=VoiceSettings(
+                    stability=0.5,
+                    similarity_boost=0.75,
+                    style=0.0,
+                    use_speaker_boost=True
+                )
             )
 
             # Collect audio chunks
@@ -177,15 +175,9 @@ class SpeechService:
             logger.info(f"Streaming speech synthesis ({language}): {text[:50]}...")
 
             # Stream audio generation
-            audio_generator = self.elevenlabs_client.generate(
+            audio_generator = elevenlabs.generate(
                 text=text,
-                voice=Voice(
-                    voice_id=voice_id,
-                    settings=VoiceSettings(
-                        stability=0.5,
-                        similarity_boost=0.75
-                    )
-                ),
+                voice=voice_id,
                 model="eleven_multilingual_v2",
                 stream=True
             )
@@ -205,14 +197,14 @@ class SpeechService:
             List of voice dictionaries
         """
         try:
-            voices = self.elevenlabs_client.voices.get_all()
+            voices = elevenlabs.voices()
             return [
                 {
                     "voice_id": voice.voice_id,
                     "name": voice.name,
-                    "labels": voice.labels
+                    "labels": getattr(voice, 'labels', {})
                 }
-                for voice in voices.voices
+                for voice in voices
             ]
         except Exception as e:
             logger.error(f"Failed to fetch voices: {str(e)}")

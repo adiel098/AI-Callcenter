@@ -275,21 +275,17 @@ def finalize_call(self, call_id: int):
                 speaker = "AI" if turn.role == SpeakerRole.AI else "User"
                 transcript_lines.append(f"{speaker}: {turn.message}")
 
-            call.transcript = "\n".join(transcript_lines)
+            transcript_text = "\n".join(transcript_lines)
+            call.transcript = transcript_text
 
             # Check if meeting was booked
             meeting = db.query(Meeting).filter(Meeting.call_id == call_id).first()
 
-            # Generate summary
-            conversation_messages = [
-                {"role": turn.role.value, "content": turn.message}
-                for turn in history
-            ]
-
+            # Generate summary using the transcript text
             import asyncio
             loop = asyncio.get_event_loop()
             summary = loop.run_until_complete(
-                self.llm.summarize_call(conversation_messages)
+                self.llm.summarize_call(transcript_text)
             )
 
             if meeting:

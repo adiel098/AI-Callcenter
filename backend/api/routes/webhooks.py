@@ -258,12 +258,33 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
             logger.info(f"Continuing conversation with intent: {intent}")
             end_call = False
 
+        # If ending call, generate and append summary to the response
+        final_response = ai_response
+        if end_call:
+            # Build transcript for summary
+            transcript_lines = []
+            for turn in history:
+                speaker = "AI" if turn.role == SpeakerRole.AI else "User"
+                transcript_lines.append(f"{speaker}: {turn.message}")
+            transcript_text = "\n".join(transcript_lines)
+
+            # Generate summary
+            try:
+                call_summary = await llm_service.summarize_call(transcript_text)
+                logger.info(f"Generated call summary: {call_summary}")
+
+                # Append summary to final response
+                final_response = f"{ai_response} ... Here's a quick summary of our conversation: {call_summary}"
+            except Exception as e:
+                logger.error(f"Failed to generate summary for end call: {str(e)}")
+                # Continue without summary if it fails
+
         db.commit()
 
         # Generate TwiML with AI response
         # Using Twilio's built-in TTS (faster response time than ElevenLabs)
         twiml = twilio_service.generate_twiml_response(
-            ai_response,
+            final_response,
             language,
             end_call=end_call
         )

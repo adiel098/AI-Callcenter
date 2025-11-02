@@ -445,13 +445,13 @@ Google Calendar will automatically send the invitation and reminders.
 
     async def summarize_call(
         self,
-        conversation_history: List[Dict[str, str]]
+        transcript: str
     ) -> str:
         """
         Generate a summary of the call
 
         Args:
-            conversation_history: Full conversation
+            transcript: Full conversation transcript as text
 
         Returns:
             Summary text
@@ -460,16 +460,19 @@ Google Calendar will automatically send the invitation and reminders.
             messages = [
                 {
                     "role": "system",
-                    "content": "Summarize this sales call in 2-3 sentences. Include outcome and any tools used."
+                    "content": "You are a call summarization assistant. Summarize the following sales call in 2-3 sentences. Include the outcome (meeting booked, not interested, needs follow-up, etc.), key points discussed, and any actions taken (like checking calendar or booking meetings)."
+                },
+                {
+                    "role": "user",
+                    "content": f"Please summarize this call transcript:\n\n{transcript}"
                 }
             ]
-            messages.extend(conversation_history)
 
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=0.5,
-                max_tokens=100
+                max_tokens=150
             )
 
             return response.choices[0].message.content.strip()

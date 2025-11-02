@@ -276,6 +276,207 @@ The system automatically detects language from phone number prefix:
 
 Add more mappings in `backend/utils/language_detector.py`
 
+### Google Calendar Setup
+
+The system uses Google Calendar API to check availability and book meetings. Follow these steps to set up calendar integration:
+
+#### Step 1: Enable Google Calendar API
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project from the project picker (top bar)
+   - If you see project ID `689797627749` or `callcenter-477010`, select it
+   - If no project exists, create a new one: **"New Project"** → Enter name → **"Create"**
+3. Navigate to **[APIs & Services > Library](https://console.cloud.google.com/apis/library)**
+4. In the search bar, type: **"Google Calendar API"**
+5. Click on **"Google Calendar API"** from results
+6. Click **"Enable"** button
+7. Wait 2-3 minutes for API to propagate
+
+#### Step 2: Create Service Account (Recommended for Production)
+
+1. Go to **[APIs & Services > Credentials](https://console.cloud.google.com/apis/credentials)**
+2. Click **"Create Credentials"** → **"Service Account"**
+3. Fill in details:
+   - **Name**: `AI Scheduler Service Account`
+   - **Description**: `Service account for booking meetings`
+4. Click **"Create and Continue"**
+5. Grant role: **"Editor"** or **"Calendar API Service Agent"**
+6. Click **"Continue"** → **"Done"**
+7. Click on the created service account
+8. Go to **"Keys"** tab → **"Add Key"** → **"Create New Key"**
+9. Select **JSON** format → **"Create"**
+10. Save the downloaded JSON file as `backend/service-account.json`
+11. Copy the service account email (looks like `ai-scheduler@project-id.iam.gserviceaccount.com`)
+
+#### Step 3: Share Calendar with Service Account
+
+1. Open [Google Calendar](https://calendar.google.com)
+2. Find your calendar in the left sidebar
+3. Click the three dots → **"Settings and sharing"**
+4. Scroll to **"Share with specific people"**
+5. Click **"Add people"**
+6. Paste the service account email from Step 2.11
+7. Set permissions: **"Make changes to events"**
+8. Click **"Send"**
+9. Copy your calendar ID from **"Integrate calendar"** section (looks like `xyz@group.calendar.google.com`)
+10. Update `.env` file:
+    ```bash
+    GOOGLE_CALENDAR_ID=your_calendar_id@group.calendar.google.com
+    ```
+
+#### Alternative: OAuth Credentials (Development)
+
+If you prefer user-based authentication:
+
+1. Go to **[APIs & Services > Credentials](https://console.cloud.google.com/apis/credentials)**
+2. Click **"Create Credentials"** → **"OAuth client ID"**
+3. Configure consent screen if prompted
+4. Application type: **"Desktop app"**
+5. Name: `AI Scheduler Desktop`
+6. Click **"Create"**
+7. Download JSON file
+8. Save as `backend/credentials.json`
+9. First run will open browser for authentication
+10. Token saved to `backend/token.json` for future use
+
+#### Step 4: Verify Calendar Service
+
+Run this Python script to verify everything works:
+
+```python
+# test_calendar.py
+from backend.services.calendar_service import CalendarService
+from datetime import datetime, timedelta
+
+# Initialize service
+cal = CalendarService()
+
+# Test 1: Check if service initialized
+if cal.service:
+    print("✅ Calendar service initialized successfully")
+else:
+    print("❌ Calendar service failed to initialize")
+    exit(1)
+
+# Test 2: Get available slots
+try:
+    slots = cal.get_next_available_slots(count=3, duration_minutes=30)
+    print(f"✅ Found {len(slots)} available time slots:")
+    for slot in slots:
+        print(f"   - {slot}")
+except Exception as e:
+    print(f"❌ Failed to get available slots: {e}")
+    exit(1)
+
+# Test 3: Check specific date
+try:
+    tomorrow = datetime.now() + timedelta(days=1)
+    tomorrow_start = tomorrow.replace(hour=9, minute=0, second=0)
+    tomorrow_end = tomorrow.replace(hour=17, minute=0, second=0)
+
+    available = cal.get_available_slots(
+        start_datetime=tomorrow_start,
+        end_datetime=tomorrow_end,
+        duration_minutes=30
+    )
+    print(f"✅ Tomorrow has {len(available)} free slots")
+except Exception as e:
+    print(f"❌ Failed to check tomorrow's availability: {e}")
+    exit(1)
+
+print("\n🎉 All calendar tests passed!")
+```
+
+Run the test:
+```bash
+cd backend
+python test_calendar.py
+```
+
+#### Step 5: Verify in Application
+
+Test calendar integration in the full system:
+
+```python
+# test_llm_calendar.py
+import asyncio
+from backend.services.llm_service import LLMService
+from backend.services.calendar_service import CalendarService
+
+async def test_llm_calendar():
+    # Initialize services
+    calendar = CalendarService()
+    llm = LLMService(calendar_service=calendar)
+
+    # Test calendar availability check
+    print("Testing calendar availability check via LLM...")
+    intent, response, tools = await llm.get_response_with_tools(
+        user_message="When are you available next week?",
+        conversation_history=[],
+        lead_info={"name": "Test User", "email": "test@example.com"}
+    )
+
+    print(f"Intent: {intent}")
+    print(f"AI Response: {response}")
+    print(f"Tools used: {len(tools)} tool(s)")
+
+    if tools and 'check_calendar_availability' in str(tools):
+        print("✅ Calendar availability check works!")
+    else:
+        print("❌ Calendar tool was not used")
+        return False
+
+    # Test meeting booking
+    print("\nTesting meeting booking via LLM...")
+    intent, response, tools = await llm.get_response_with_tools(
+        user_message="Let's book a meeting for tomorrow at 2pm. My email is test@example.com",
+        conversation_history=[
+            {"role": "assistant", "content": "I can help schedule a meeting. When works for you?"}
+        ],
+        lead_info={"name": "Test User", "email": "test@example.com"}
+    )
+
+    print(f"Intent: {intent}")
+    print(f"AI Response: {response}")
+    print(f"Tools used: {len(tools)} tool(s)")
+
+    if tools and 'book_meeting' in str(tools):
+        print("✅ Meeting booking works!")
+    else:
+        print("⚠️ Booking not triggered (might need more specific time)")
+
+    print("\n🎉 LLM + Calendar integration test complete!")
+    return True
+
+# Run the test
+asyncio.run(test_llm_calendar())
+```
+
+Run the test:
+```bash
+cd backend
+python test_llm_calendar.py
+```
+
+#### Step 6: Monitor Calendar Service Health
+
+Add this health check to verify calendar service status:
+
+```bash
+# Check if calendar service is working
+curl http://localhost:8000/docs
+
+# Look for successful calendar operations in logs
+tail -f logs/worker.log | grep -i calendar
+```
+
+Expected log output:
+```
+✅ Google Calendar service initialized successfully
+Executing tool: check_calendar_availability
+Calendar availability check successful: 3 slots found
+```
+
 ## 🎬 Usage Workflow
 
 ### 1. Upload Leads
@@ -340,10 +541,154 @@ The system automatically scales based on:
 - Verify phone number format (E.164: +1234567890)
 - Check Twilio account balance
 
-**2. No Calendar Events Created**
-- Verify Google Calendar credentials
-- Check calendar ID
-- Ensure API is enabled in Google Cloud Console
+**2. Google Calendar API Errors**
+
+#### Error: `403 Forbidden - accessNotConfigured`
+```
+Google Calendar API has not been used in project XXXXXX before or it is disabled
+```
+
+**Solution:**
+1. Identify which Google Cloud project is being used:
+   - Check error message for project ID (e.g., `689797627749`)
+   - Or check your `backend/service-account.json` for `project_id` field
+2. Enable the API:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Switch to the correct project (use project picker in top bar)
+   - Navigate to [APIs & Services > Library](https://console.cloud.google.com/apis/library)
+   - Search for "Google Calendar API"
+   - Click "Enable"
+3. Wait 2-3 minutes for changes to propagate
+4. Restart your application:
+   ```bash
+   # Restart FastAPI
+   pkill -f uvicorn
+   uvicorn backend.main:app --reload --port 8000
+
+   # Restart Celery workers
+   pkill -f celery
+   celery -A backend.workers.celery_app worker --loglevel=info
+   ```
+5. Test again using the verification scripts in the Google Calendar Setup section
+
+#### Error: `404 Not Found` or `Calendar not found`
+```
+Resource not found as specified or Insufficient Permission
+```
+
+**Solution:**
+1. Verify calendar ID in `.env` file:
+   ```bash
+   # Should look like:
+   GOOGLE_CALENDAR_ID=abc123@group.calendar.google.com
+   # OR for primary calendar:
+   GOOGLE_CALENDAR_ID=your.email@gmail.com
+   ```
+2. Check calendar sharing permissions:
+   - Open [Google Calendar](https://calendar.google.com)
+   - Go to calendar Settings → "Share with specific people"
+   - Ensure service account email is listed with "Make changes to events" permission
+3. Get the correct calendar ID:
+   - In Google Calendar, go to Settings
+   - Select your calendar from the left
+   - Scroll to "Integrate calendar" section
+   - Copy the "Calendar ID"
+
+#### Error: `401 Unauthorized` or `Invalid Credentials`
+```
+Request had invalid authentication credentials
+```
+
+**Solution:**
+1. Check authentication file exists:
+   ```bash
+   # Service account (production)
+   ls -la backend/service-account.json
+
+   # OR OAuth credentials (development)
+   ls -la backend/credentials.json
+   ls -la backend/token.json
+   ```
+2. If using service account:
+   - Verify JSON file is valid (should have `type: "service_account"`)
+   - Re-download from Google Cloud Console if corrupted
+   - Ensure file path in `.env` matches actual location:
+     ```bash
+     GOOGLE_CALENDAR_CREDENTIALS_FILE=backend/service-account.json
+     ```
+3. If using OAuth:
+   - Delete `backend/token.json`
+   - Re-run application to trigger OAuth flow
+   - Authenticate in browser when prompted
+4. Verify file permissions:
+   ```bash
+   chmod 600 backend/service-account.json
+   chmod 600 backend/credentials.json
+   ```
+
+#### Error: `Calendar service is not configured`
+```
+AI response: "Calendar service is not configured. Please contact support."
+```
+
+**Solution:**
+1. Check application logs for root cause:
+   ```bash
+   tail -100 logs/worker.log | grep -i "calendar"
+   ```
+2. Look for initialization error:
+   - If you see "❌ Failed to initialize Google Calendar service", check the error details
+   - Common causes: missing credentials file, wrong file path, invalid JSON
+3. Verify environment variables:
+   ```bash
+   # Print current config (remove sensitive data first!)
+   python -c "from backend.config import settings; print(f'Calendar file: {settings.google_calendar_credentials_file}'); print(f'Calendar ID: {settings.google_calendar_id}')"
+   ```
+4. Test calendar service directly:
+   ```bash
+   cd backend
+   python -c "from services.calendar_service import CalendarService; cal = CalendarService(); print('✅ Success' if cal.service else '❌ Failed')"
+   ```
+
+#### Error: `Project ID Mismatch`
+If you have multiple Google Cloud projects and see different project IDs in errors:
+
+**Solution:**
+1. Decide which project to use (e.g., `callcenter-477010` or `689797627749`)
+2. Ensure API is enabled in THAT project
+3. Ensure credentials are from THAT project:
+   - Open `backend/service-account.json` or `backend/credentials.json`
+   - Check `project_id` field matches your chosen project
+4. If mismatch, create new credentials in the correct project
+
+#### No Calendar Events Created (No Error)
+AI conversation completes but no meeting appears on calendar.
+
+**Solution:**
+1. Check database for meeting record:
+   ```bash
+   # In Python console
+   from backend.database import SessionLocal
+   from backend.models.meeting import Meeting
+   db = SessionLocal()
+   meetings = db.query(Meeting).all()
+   print(f"Total meetings: {len(meetings)}")
+   for m in meetings[-5:]:  # Last 5
+       print(f"Meeting: {m.scheduled_time}, Status: {m.status}")
+   ```
+2. Check if booking was attempted:
+   ```bash
+   grep "book_meeting" logs/worker.log | tail -20
+   ```
+3. Verify calendar visibility:
+   - Open Google Calendar in browser
+   - Check the correct calendar is selected (left sidebar)
+   - Try different time ranges
+4. Check Google Calendar event ID:
+   ```bash
+   # If meeting has google_event_id in database but not visible:
+   # Event might be on a different calendar or deleted
+   ```
 
 **3. Worker Not Processing Tasks**
 - Confirm Redis is running
@@ -355,6 +700,32 @@ The system automatically scales based on:
 - Verify audio format compatibility
 - Test different voice IDs
 
+### Quick Reference: Calendar Errors
+
+| Error Code | Error Message | Quick Fix |
+|------------|--------------|-----------|
+| **403** | `accessNotConfigured` | Enable Google Calendar API in Google Cloud Console |
+| **404** | `Calendar not found` | Verify calendar ID and sharing permissions |
+| **401** | `Invalid credentials` | Check credentials file path and validity |
+| **400** | `Bad Request` | Check date/time format and timezone |
+| **429** | `Rate limit exceeded` | Add exponential backoff, check quota |
+| **500** | `Backend Error` | Google Calendar service issue, retry later |
+
+### Calendar Integration Checklist
+
+Before deploying to production, verify:
+
+- [ ] Google Calendar API is enabled in Google Cloud Console
+- [ ] Service account created and JSON key downloaded
+- [ ] Calendar shared with service account email
+- [ ] Calendar ID added to `.env` file
+- [ ] Credentials file at correct path (`backend/service-account.json`)
+- [ ] Test script runs successfully (`python test_calendar.py`)
+- [ ] Application logs show "✅ Google Calendar service initialized"
+- [ ] Test booking creates actual calendar event
+- [ ] Meeting invites are sent to attendees
+- [ ] Google Meet links are generated (if enabled)
+
 ### Logs
 
 View logs:
@@ -364,6 +735,9 @@ tail -f logs/api.log
 
 # Worker logs
 tail -f logs/worker.log
+
+# Calendar-specific logs
+tail -f logs/worker.log | grep -i calendar
 
 # On Render
 render logs -s ai-scheduler-api

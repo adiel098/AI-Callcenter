@@ -320,6 +320,21 @@ export default function Settings() {
                     Select Default Voice
                   </label>
 
+                  {/* Warning if no voices available */}
+                  {!availableVoices || availableVoices.length === 0 ? (
+                    <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                        ⚠️ ElevenLabs API Not Configured
+                      </h3>
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        Voice selection requires an ElevenLabs API key. Please add <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">ELEVENLABS_API_KEY</code> to your environment variables.
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">
+                        The system will use language-based default voices until this is configured.
+                      </p>
+                    </div>
+                  ) : null}
+
                   {/* Voice List */}
                   <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
                     {/* Language-based default option */}

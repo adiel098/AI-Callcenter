@@ -38,6 +38,27 @@ class CalendarService:
         self.service = None
         self._authenticate()
 
+    def _is_service_account(self) -> bool:
+        """
+        Check if using service account authentication
+
+        Returns:
+            True if using service account, False if using OAuth
+        """
+        return isinstance(self.creds, service_account.Credentials)
+
+    def _is_group_calendar(self, calendar_id: str) -> bool:
+        """
+        Check if calendar is a shared/group calendar
+
+        Args:
+            calendar_id: Calendar ID to check
+
+        Returns:
+            True if calendar is a group calendar, False otherwise
+        """
+        return calendar_id and calendar_id.endswith('@group.calendar.google.com')
+
     def _authenticate(self):
         """
         Authenticate with Google Calendar API
@@ -209,6 +230,11 @@ class CalendarService:
         Returns:
             dict with event_id and google_meet_link if successful, None otherwise
             Example: {'event_id': 'abc123', 'google_meet_link': 'https://meet.google.com/xxx-yyyy-zzz'}
+
+        Note:
+            Google Meet conference links are only created when using OAuth authentication
+            with personal calendars. Service accounts on group calendars don't support
+            conference data creation due to API limitations.
         """
         if not self.service:
             logger.error("Calendar service not initialized")
@@ -235,22 +261,34 @@ class CalendarService:
                     {'method': 'email', 'minutes': 24 * 60},  # 1 day before
                     {'method': 'popup', 'minutes': 10},
                 ],
-            },
-            'conferenceData': {
+            }
+        }
+
+        # Only add Google Meet conference data for OAuth authentication
+        # Service accounts on group calendars don't support conference creation
+        if not self._is_service_account():
+            event['conferenceData'] = {
                 'createRequest': {
                     'requestId': f"meeting-{int(datetime.now().timestamp())}",
                     'conferenceSolutionKey': {'type': 'hangoutsMeet'}
                 }
             }
-        }
+            logger.info("Adding Google Meet conference data (OAuth authentication)")
+        else:
+            logger.info("Skipping conference data (Service Account mode - not supported on group calendars)")
 
         try:
-            event_result = self.service.events().insert(
-                calendarId=calendar_id,
-                body=event,
-                conferenceDataVersion=1,
-                sendUpdates='none'  # Changed from 'all' - invites sent via email service
-            ).execute()
+            # Only include conferenceDataVersion if conference data is present
+            insert_params = {
+                'calendarId': calendar_id,
+                'body': event,
+                'sendUpdates': 'none'  # Changed from 'all' - invites sent via email service
+            }
+
+            if 'conferenceData' in event:
+                insert_params['conferenceDataVersion'] = 1
+
+            event_result = self.service.events().insert(**insert_params).execute()
 
             event_id = event_result['id']
 

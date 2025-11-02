@@ -25,7 +25,12 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm run build:*)",
       "Bash(docker run:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 5 bash -c 'while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done && echo \"\"Backend is ready\"\"')",
+      "Bash(curl:*)",
+      "Bash(findstr:*)",
+      "Bash(docker ps:*)"
     ],
     "deny": [],
     "ask": []

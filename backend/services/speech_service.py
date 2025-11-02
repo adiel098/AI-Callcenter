@@ -1,15 +1,16 @@
 """
 Speech services for STT (Deepgram) and TTS (ElevenLabs)
 """
-from deepgram import Deepgram
-from elevenlabs import ElevenLabs, Voice, VoiceSettings
+from deepgram import DeepgramClient, PrerecordedOptions, FileSource
+from elevenlabs.client import ElevenLabs
+from elevenlabs import Voice, VoiceSettings
 import httpx
 import logging
 from typing import Optional, AsyncIterator
 import io
 
-from backend.config import get_settings
-from backend.utils.language_detector import get_deepgram_language_code, get_voice_for_language
+from config import get_settings
+from utils.language_detector import get_deepgram_language_code, get_voice_for_language
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -19,8 +20,8 @@ class SpeechService:
     """Service for speech-to-text and text-to-speech operations"""
 
     def __init__(self):
-        # Initialize Deepgram client
-        self.deepgram_client = Deepgram(settings.deepgram_api_key)
+        # Initialize Deepgram client (v3 SDK)
+        self.deepgram_client = DeepgramClient(settings.deepgram_api_key)
 
         # Initialize ElevenLabs client
         self.elevenlabs_client = ElevenLabs(api_key=settings.elevenlabs_api_key)
@@ -44,17 +45,17 @@ class SpeechService:
             # Convert language code to Deepgram format
             deepgram_language = get_deepgram_language_code(language)
 
-            # Configure Deepgram options
-            options = {
-                "model": "nova-2",
-                "language": deepgram_language,
-                "smart_format": True,
-                "punctuate": True,
-                "diarize": False
-            }
+            # Configure Deepgram options (v3 SDK)
+            options = PrerecordedOptions(
+                model="nova-2",
+                language=deepgram_language,
+                smart_format=True,
+                punctuate=True,
+                diarize=False
+            )
 
-            # Create payload
-            payload = {"buffer": audio_data}
+            # Create payload (v3 SDK)
+            payload = FileSource(buffer=audio_data)
 
             # Transcribe
             response = self.deepgram_client.listen.rest.v("1").transcribe_file(
@@ -82,6 +83,10 @@ class SpeechService:
         """
         Transcribe streaming audio in real-time using Deepgram
 
+        NOTE: This is a placeholder for future implementation.
+        For production, implement full Deepgram streaming with WebSocket.
+        Use transcribe_audio() for batch transcription.
+
         Args:
             audio_stream: Async iterator of audio chunks
             language: Language code
@@ -89,25 +94,8 @@ class SpeechService:
         Yields:
             Transcribed text segments
         """
-        try:
-            deepgram_language = get_deepgram_language_code(language)
-
-            # Configure live streaming options
-            options = LiveOptions(
-                model="nova-2",
-                language=deepgram_language,
-                smart_format=True,
-                punctuate=True,
-                interim_results=False,
-                endpointing=300
-            )
-
-            # This is a simplified version - actual implementation would use WebSocket
-            # For production, implement full Deepgram streaming with WebSocket
-            logger.warning("Streaming transcription not fully implemented - use batch transcription")
-
-        except Exception as e:
-            logger.error(f"Streaming transcription error: {str(e)}")
+        logger.warning("Streaming transcription not implemented - use batch transcription with transcribe_audio()")
+        raise NotImplementedError("Streaming transcription requires WebSocket implementation. Use transcribe_audio() instead.")
 
     async def synthesize_speech(
         self,

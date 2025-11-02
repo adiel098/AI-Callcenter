@@ -6,7 +6,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 from typing import Optional, Dict
 import logging
 
-from backend.config import get_settings
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

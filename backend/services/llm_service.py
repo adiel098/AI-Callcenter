@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import json
 
-from backend.config import get_settings
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -61,6 +61,8 @@ class LLMService:
 
     def _get_system_prompt_with_tools(self) -> str:
         """Get system prompt enhanced with tool instructions"""
+        base_prompt = self.system_prompt
+
         tool_instructions = """
 
 IMPORTANT: You have access to these tools for real actions:
@@ -75,7 +77,7 @@ Use these tools when appropriate:
 IMPORTANT: Always collect the guest's email before booking!
 Google Calendar will automatically send the invitation and reminders.
 """
-        return self.system_prompt + tool_instructions
+        return base_prompt + tool_instructions
 
     def _get_tools_definition(self) -> List[Dict]:
         """
@@ -179,14 +181,10 @@ Google Calendar will automatically send the invitation and reminders.
     async def _check_calendar_availability(self, args: Dict) -> Dict:
         """Check calendar availability and return free slots"""
         if not self.calendar_service:
-            # Mock response for testing without calendar
+            logger.error("Calendar service not available")
             return {
-                "success": True,
-                "available_slots": [
-                    {"datetime": "2025-01-10T14:00:00", "display": "Friday, January 10 at 2:00 PM"},
-                    {"datetime": "2025-01-10T16:00:00", "display": "Friday, January 10 at 4:00 PM"},
-                    {"datetime": "2025-01-13T10:00:00", "display": "Monday, January 13 at 10:00 AM"}
-                ]
+                "success": False,
+                "error": "Calendar service is not configured. Please contact support."
             }
 
         try:
@@ -210,12 +208,10 @@ Google Calendar will automatically send the invitation and reminders.
     async def _book_meeting(self, args: Dict) -> Dict:
         """Book a meeting on Google Calendar"""
         if not self.calendar_service:
-            # Mock response for testing
+            logger.error("Calendar service not available for booking")
             return {
-                "success": True,
-                "meeting_id": "mock_meeting_123",
-                "calendar_link": "https://calendar.google.com/event?eid=mock123",
-                "message": f"Meeting booked for {args.get('guest_name')} at {args.get('datetime')}"
+                "success": False,
+                "error": "Calendar service is not configured. Please contact support."
             }
 
         try:

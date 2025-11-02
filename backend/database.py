@@ -6,8 +6,8 @@ from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
 from typing import Generator
 
-from backend.config import get_settings
-from backend.models.base import Base
+from config import get_settings
+from models.base import Base
 
 settings = get_settings()
 

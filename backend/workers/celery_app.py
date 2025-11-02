@@ -2,7 +2,7 @@
 Celery application configuration
 """
 from celery import Celery
-from backend.config import get_settings
+from config import get_settings
 
 settings = get_settings()
 
@@ -11,7 +11,7 @@ celery_app = Celery(
     "ai_scheduler",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=['backend.workers.tasks']
+    include=['workers.tasks']
 )
 
 # Celery configuration

@@ -36,50 +36,15 @@ export default function Analytics() {
     queryFn: getAnalyticsOverview,
   });
 
-  const { isLoading: outcomesLoading } = useQuery({
+  const { data: callOutcomes, isLoading: outcomesLoading } = useQuery({
     queryKey: ['call-outcomes'],
     queryFn: getCallOutcomes,
   });
 
-  const { isLoading: languageLoading } = useQuery({
+  const { data: languageData, isLoading: languageLoading } = useQuery({
     queryKey: ['language-distribution'],
     queryFn: getLanguageDistribution,
   });
-
-  // Mock data for demo
-  const mockCallOutcomes = [
-    { name: 'Meeting Scheduled', value: 45, color: '#8b5cf6' },
-    { name: 'Interested', value: 78, color: '#10b981' },
-    { name: 'Not Interested', value: 34, color: '#6b7280' },
-    { name: 'Callback', value: 23, color: '#3b82f6' },
-    { name: 'No Answer', value: 56, color: '#f59e0b' },
-  ];
-
-  const mockLanguageData = [
-    { language: 'English', calls: 145 },
-    { language: 'Spanish', calls: 89 },
-    { language: 'French', calls: 56 },
-    { language: 'German', calls: 34 },
-    { language: 'Other', calls: 22 },
-  ];
-
-  const mockCallsOverTime = [
-    { date: 'Jan 1', calls: 65, meetings: 12 },
-    { date: 'Jan 2', calls: 78, meetings: 15 },
-    { date: 'Jan 3', calls: 90, meetings: 18 },
-    { date: 'Jan 4', calls: 81, meetings: 14 },
-    { date: 'Jan 5', calls: 95, meetings: 20 },
-    { date: 'Jan 6', calls: 102, meetings: 22 },
-    { date: 'Jan 7', calls: 88, meetings: 16 },
-  ];
-
-  const mockConversionFunnel = [
-    { stage: 'Leads', value: 500 },
-    { stage: 'Calls Made', value: 346 },
-    { stage: 'Interested', value: 180 },
-    { stage: 'Meetings', value: 90 },
-    { stage: 'Closed', value: 45 },
-  ];
 
   const COLORS = ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
@@ -170,11 +135,11 @@ export default function Analytics() {
                 <CardContent>
                   {outcomesLoading ? (
                     <ChartSkeleton />
-                  ) : (
+                  ) : callOutcomes && callOutcomes.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
-                          data={mockCallOutcomes}
+                          data={callOutcomes}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
@@ -185,13 +150,17 @@ export default function Analytics() {
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {mockCallOutcomes.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          {callOutcomes.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
                         <Tooltip />
                       </PieChart>
                     </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                      No call outcome data available
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -209,15 +178,21 @@ export default function Analytics() {
                   <CardDescription>Total number of each outcome</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={mockCallOutcomes}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {callOutcomes && callOutcomes.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={callOutcomes}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                      No data available
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -236,31 +211,9 @@ export default function Analytics() {
                 <CardDescription>Daily performance for the last 7 days</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={mockCallsOverTime}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="calls"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 8 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="meetings"
-                      stroke="#8b5cf6"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 8 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                  Historical trend data coming soon
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -280,9 +233,9 @@ export default function Analytics() {
               <CardContent>
                 {languageLoading ? (
                   <ChartSkeleton />
-                ) : (
+                ) : languageData && languageData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={mockLanguageData} layout="vertical">
+                    <BarChart data={languageData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
                       <YAxis dataKey="language" type="category" width={100} />
@@ -290,6 +243,10 @@ export default function Analytics() {
                       <Bar dataKey="calls" fill="#3b82f6" radius={[0, 8, 8, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                    No language distribution data available
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -310,19 +267,9 @@ export default function Analytics() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={mockConversionFunnel} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="stage" type="category" width={120} />
-                    <Tooltip />
-                    <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                      {mockConversionFunnel.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                  Conversion funnel data coming soon
+                </div>
 
                 {/* Conversion Rates */}
                 <div className="mt-6 grid gap-4 md:grid-cols-4">

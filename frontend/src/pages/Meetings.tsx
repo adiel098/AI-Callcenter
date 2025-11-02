@@ -60,41 +60,6 @@ export default function Meetings() {
 
   const meetings: Meeting[] = meetingsData?.meetings || [];
 
-  // Mock upcoming meetings
-  const mockMeetings = [
-    {
-      id: 1,
-      lead_name: 'John Doe',
-      email: 'john@example.com',
-      scheduled_at: format(addDays(new Date(), 1), 'yyyy-MM-dd\'T\'14:00:00'),
-      duration: 30,
-      status: 'confirmed' as const,
-      meeting_type: 'video' as const,
-      meeting_link: 'https://meet.google.com/abc-defg-hij',
-    },
-    {
-      id: 2,
-      lead_name: 'Jane Smith',
-      email: 'jane@example.com',
-      scheduled_at: format(addDays(new Date(), 2), 'yyyy-MM-dd\'T\'10:00:00'),
-      duration: 45,
-      status: 'scheduled' as const,
-      meeting_type: 'phone' as const,
-    },
-    {
-      id: 3,
-      lead_name: 'Bob Johnson',
-      email: 'bob@example.com',
-      scheduled_at: format(addDays(new Date(), 3), 'yyyy-MM-dd\'T\'16:30:00'),
-      duration: 60,
-      status: 'scheduled' as const,
-      meeting_type: 'in_person' as const,
-      location: '123 Business St, Suite 100',
-    },
-  ];
-
-  const displayMeetings = meetings.length > 0 ? meetings : mockMeetings;
-
   const columns: ColumnDef<Meeting>[] = [
     {
       accessorKey: 'lead_name',
@@ -199,7 +164,7 @@ export default function Meetings() {
 
   // Get meetings for selected date
   const meetingsOnSelectedDate = selectedDate
-    ? displayMeetings.filter((meeting) =>
+    ? meetings.filter((meeting) =>
         isSameDay(new Date(meeting.scheduled_at), selectedDate)
       )
     : [];
@@ -226,7 +191,7 @@ export default function Meetings() {
         <TabsContent value="list" className="space-y-4">
           {isLoading ? (
             <TableSkeleton rows={5} />
-          ) : displayMeetings.length === 0 ? (
+          ) : meetings.length === 0 ? (
             <EmptyState
               icon={CalendarIcon}
               title="No meetings scheduled"
@@ -244,7 +209,7 @@ export default function Meetings() {
             >
               <DataTable
                 columns={columns}
-                data={displayMeetings}
+                data={meetings}
                 searchKey="lead_name"
                 searchPlaceholder="Search by lead name..."
               />
@@ -349,7 +314,7 @@ export default function Meetings() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            {displayMeetings.slice(0, 3).map((meeting) => {
+            {meetings.slice(0, 3).map((meeting) => {
               const Icon = typeConfig[meeting.meeting_type].icon;
               return (
                 <motion.div

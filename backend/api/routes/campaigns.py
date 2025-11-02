@@ -50,24 +50,44 @@ async def start_campaign(campaign: CampaignCreate, db: Session = Depends(get_db)
                 detail="No eligible leads (must be pending or no_answer status)"
             )
 
-        # Queue leads for calling (this will be handled by Celery in production)
-        queued_count = 0
-        for lead in eligible_leads:
-            # Update status to queued
-            lead.status = LeadStatus.QUEUED
-            queued_count += 1
+        # Queue leads for calling with Celery
+        from backend.workers.tasks import initiate_call
+        import time
 
-            # In production, queue Celery task here:
-            # from backend.workers.tasks import initiate_call
-            # initiate_call.delay(lead.id)
+        queued_count = 0
+        failed_count = 0
+
+        for lead in eligible_leads:
+            try:
+                # Update status to queued
+                lead.status = LeadStatus.QUEUED
+                db.commit()
+
+                # Queue Celery task with countdown for rate limiting
+                # Stagger calls by 5 seconds each to avoid overwhelming the system
+                countdown = queued_count * 5
+                initiate_call.apply_async(args=[lead.id], countdown=countdown)
+
+                queued_count += 1
+                logger.info(f"Queued call for lead {lead.id} (delay: {countdown}s)")
+
+            except Exception as e:
+                logger.error(f"Failed to queue lead {lead.id}: {str(e)}")
+                failed_count += 1
+                lead.status = LeadStatus.PENDING  # Reset to pending if queueing failed
+                db.commit()
 
         db.commit()
 
-        logger.info(f"Campaign '{campaign.name}' started with {queued_count} leads")
+        logger.info(f"Campaign '{campaign.name}' started: {queued_count} queued, {failed_count} failed")
+
+        message = f"Campaign started successfully with {queued_count} leads queued"
+        if failed_count > 0:
+            message += f" ({failed_count} failed to queue)"
 
         return CampaignResponse(
             success=True,
-            message=f"Campaign started successfully",
+            message=message,
             queued_leads=queued_count
         )
 

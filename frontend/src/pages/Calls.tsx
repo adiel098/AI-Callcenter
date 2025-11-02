@@ -75,64 +75,7 @@ export default function Calls() {
 
   const calls: Call[] = callsData?.calls || [];
 
-  // Mock transcript for demo
-  const mockTranscript = [
-    {
-      role: 'assistant' as const,
-      content: 'Hello! This is AI from the outbound team. Am I speaking with John?',
-      timestamp: '00:00',
-    },
-    {
-      role: 'user' as const,
-      content: 'Yes, this is John speaking.',
-      timestamp: '00:05',
-    },
-    {
-      role: 'assistant' as const,
-      content: 'Great! I wanted to discuss our new product offering. Do you have a few minutes?',
-      timestamp: '00:08',
-    },
-    {
-      role: 'user' as const,
-      content: 'Sure, I have some time. What is it about?',
-      timestamp: '00:15',
-    },
-    {
-      role: 'assistant' as const,
-      content: 'We have a new AI-powered solution that can help streamline your workflow. Would you be interested in scheduling a demo meeting?',
-      timestamp: '00:20',
-    },
-    {
-      role: 'user' as const,
-      content: 'That sounds interesting! Yes, I would like to schedule a meeting.',
-      timestamp: '00:30',
-    },
-    {
-      role: 'assistant' as const,
-      content: 'Excellent! I have availability next Tuesday at 2pm or Wednesday at 10am. Which works better for you?',
-      timestamp: '00:35',
-    },
-    {
-      role: 'user' as const,
-      content: 'Tuesday at 2pm works great for me.',
-      timestamp: '00:42',
-    },
-    {
-      role: 'assistant' as const,
-      content: 'Perfect! I have booked a meeting for Tuesday at 2pm. You will receive a calendar invite shortly. Is there anything else I can help you with?',
-      timestamp: '00:48',
-    },
-    {
-      role: 'user' as const,
-      content: 'No, that\'s all. Thank you!',
-      timestamp: '00:58',
-    },
-    {
-      role: 'assistant' as const,
-      content: 'Thank you for your time! Have a great day!',
-      timestamp: '01:00',
-    },
-  ];
+  // Removed mock transcript - using real data from API
 
   const columns: ColumnDef<Call>[] = [
     {
@@ -226,7 +169,7 @@ export default function Calls() {
             variant="outline"
             size="sm"
             onClick={() => {
-              setSelectedCall({ ...call, transcript: mockTranscript });
+              setSelectedCall(call);
               setTranscriptOpen(true);
             }}
           >

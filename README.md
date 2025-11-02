@@ -724,7 +724,7 @@ This system now automatically sends calendar invites as .ics email attachments, 
        meeting_datetime=datetime.now() + timedelta(days=1),
        duration_minutes=30,
        meeting_title="Test Meeting",
-       google_meet_link="https://meet.google.com/xxx-yyyy-zzz"
+       zoom_link="https://zoom.us/j/123456789?pwd=xxx"
    )
 
    print(f"Email sent: {success}")
@@ -739,7 +739,7 @@ This system now automatically sends calendar invites as .ics email attachments, 
 **Features:**
 - ✅ Professional HTML emails with meeting details
 - ✅ .ics calendar file attachment
-- ✅ Includes Google Meet links
+- ✅ Includes Zoom video conference links
 - ✅ Works with service accounts (no OAuth needed)
 - ✅ Fully automated - no manual intervention
 - ✅ Recipient gets standard "Add to Calendar" experience
@@ -904,11 +904,13 @@ Before deploying to production, verify:
 - [ ] Calendar shared with service account email
 - [ ] Calendar ID added to `.env` file
 - [ ] Credentials file at correct path (`backend/service-account.json`)
+- [ ] Zoom credentials added to `.env` file (ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET)
 - [ ] Test script runs successfully (`python test_calendar.py`)
 - [ ] Application logs show "✅ Google Calendar service initialized"
+- [ ] Application logs show "Zoom service initialized"
 - [ ] Test booking creates actual calendar event
 - [ ] Meeting invites are sent to attendees
-- [ ] Google Meet links are generated (if enabled)
+- [ ] Zoom video conference links are generated
 
 ### Logs
 

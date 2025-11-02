@@ -387,10 +387,12 @@ Google Calendar will automatically send the invitation and reminders.
 
     async def _book_meeting(self, args: Dict) -> Dict:
         """
-        Book a meeting on Google Calendar.
+        Book a meeting on Google Calendar with Zoom video conferencing.
 
-        This method creates a calendar event and adds the guest as an attendee.
-        Google Calendar automatically sends the invite email to the attendee.
+        This method:
+        1. Creates a Zoom meeting (if ZoomService is configured)
+        2. Creates a Google Calendar event with Zoom link in description
+        3. Google Calendar automatically sends invite email to the attendee
 
         Args:
             args: Dictionary containing:
@@ -402,7 +404,14 @@ Google Calendar will automatically send the invitation and reminders.
                 - description: Meeting description (optional)
 
         Returns:
-            Dictionary with success status, event_id, and google_meet_link
+            Dictionary with success status, event_id, zoom_link, and video_link
+            Example: {
+                "success": True,
+                "event_id": "abc123",
+                "zoom_link": "https://zoom.us/j/123456789",
+                "video_link": "https://zoom.us/j/123456789",
+                "message": "Meeting booked with Zoom link..."
+            }
         """
         logger.info("=" * 80)
         logger.info("BOOKING MEETING - Starting process")

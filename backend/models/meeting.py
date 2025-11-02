@@ -31,7 +31,7 @@ class Meeting(Base):
     guest_email = Column(String(255), nullable=True)
     calendar_event_id = Column(String(255), nullable=True, unique=True)  # Google Calendar event ID
     duration = Column(Integer, nullable=True, default=30)  # Duration in minutes
-    meeting_link = Column(Text, nullable=True)  # Google Meet or video conference link
+    meeting_link = Column(Text, nullable=True)  # Zoom video conference link
     notes = Column(Text, nullable=True)  # Additional notes
 
     # Status

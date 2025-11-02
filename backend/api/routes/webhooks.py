@@ -112,11 +112,13 @@ async def twilio_voice_callback(request: Request, db: Session = Depends(get_db))
         try:
             # Import services
             from backend.services import CalendarService, LLMService
+            from backend.services.zoom_service import ZoomService
             from backend.models import ConversationHistory, SpeakerRole
 
             # Generate personalized opening message
             calendar_service = CalendarService()
-            llm_service = LLMService(calendar_service=calendar_service)
+            zoom_service = ZoomService()
+            llm_service = LLMService(calendar_service=calendar_service, zoom_service=zoom_service)
 
             opening_message = await llm_service.generate_opening_message(
                 lead_info={
@@ -228,7 +230,8 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
 
         # Initialize services
         calendar_service = CalendarService()
-        llm_service = LLMService(calendar_service=calendar_service)
+        zoom_service = ZoomService()
+        llm_service = LLMService(calendar_service=calendar_service, zoom_service=zoom_service)
 
         # Get LLM response with tools
         intent, ai_response, tool_calls = await llm_service.get_response_with_tools(

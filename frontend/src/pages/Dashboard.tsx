@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getAnalyticsOverview } from '../services/api';
+import { getAnalyticsOverview, getRecentActivity, getActiveCampaigns } from '../services/api';
+import { formatDistanceToNow } from 'date-fns';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
 import { StatCardsSkeleton } from '@/components/LoadingStates';
+import { LeadStatusStats } from '@/components/LeadStatusStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,49 +36,19 @@ export default function Dashboard() {
     queryFn: getAnalyticsOverview,
   });
 
-  // Mock recent activity data - replace with real API call
-  const recentActivity = [
-    {
-      id: 1,
-      type: 'call',
-      title: 'Call completed with John Doe',
-      description: 'Meeting scheduled for next week',
-      time: '2 minutes ago',
-      status: 'success',
-    },
-    {
-      id: 2,
-      type: 'meeting',
-      title: 'Meeting scheduled with Jane Smith',
-      description: 'Tuesday at 2:00 PM',
-      time: '15 minutes ago',
-      status: 'success',
-    },
-    {
-      id: 3,
-      type: 'lead',
-      title: '25 new leads uploaded',
-      description: 'CSV import completed',
-      time: '1 hour ago',
-      status: 'info',
-    },
-    {
-      id: 4,
-      type: 'call',
-      title: 'Call failed with Bob Johnson',
-      description: 'No answer',
-      time: '2 hours ago',
-      status: 'error',
-    },
-    {
-      id: 5,
-      type: 'call',
-      title: 'Call in progress with Alice Williams',
-      description: 'Duration: 3:45',
-      time: 'Just now',
-      status: 'pending',
-    },
-  ];
+  const { data: recentActivityData, isLoading: activityLoading } = useQuery({
+    queryKey: ['recent-activity'],
+    queryFn: () => getRecentActivity(10),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const { data: campaignsData, isLoading: campaignsLoading } = useQuery({
+    queryKey: ['active-campaigns'],
+    queryFn: getActiveCampaigns,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const recentActivity = recentActivityData?.activities || [];
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -174,71 +146,100 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Quick Actions */}
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>
-              Manage your campaigns and leads efficiently
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  className="w-full h-24 flex-col gap-2"
-                  variant="outline"
-                  onClick={() => navigate('/leads')}
-                >
-                  <Upload className="h-8 w-8" />
-                  <span>Upload Leads</span>
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  className="w-full h-24 flex-col gap-2"
-                  variant="outline"
-                  onClick={() => navigate('/leads')}
-                >
-                  <Rocket className="h-8 w-8" />
-                  <span>Start Campaign</span>
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  className="w-full h-24 flex-col gap-2"
-                  variant="outline"
-                  onClick={() => navigate('/analytics')}
-                >
-                  <BarChart3 className="h-8 w-8" />
-                  <span>View Analytics</span>
-                </Button>
-              </motion.div>
+      {/* Active Campaigns */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Campaigns</CardTitle>
+          <CardDescription>Currently running call campaigns</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {campaignsLoading ? (
+            <div className="flex items-center justify-center h-20">
+              <p className="text-sm text-muted-foreground">Loading campaigns...</p>
             </div>
-          </CardContent>
-        </Card>
+          ) : campaignsData?.campaigns && campaignsData.campaigns.length > 0 ? (
+            <div className="space-y-6">
+              {campaignsData.campaigns.map((campaign: any, index: number) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{campaign.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {campaign.completed} / {campaign.total} leads contacted
+                      </p>
+                    </div>
+                    <Badge variant={campaign.is_active ? "default" : "secondary"}>
+                      <PhoneCall className="mr-1 h-3 w-3" />
+                      {campaign.is_active ? 'Active' : 'Idle'}
+                    </Badge>
+                  </div>
+                  <div className="h-2 rounded-full bg-secondary">
+                    <div
+                      className="h-2 rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${campaign.progress}%` }}
+                    />
+                  </div>
+                  {campaign.is_active && (
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span>Queued: {campaign.queued}</span>
+                      <span>Calling: {campaign.calling}</span>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <p className="text-sm text-muted-foreground mb-2">No active campaigns</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate('/leads')}
+              >
+                Start a Campaign
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Active Campaigns */}
-        <Card className="lg:col-span-3">
+      {/* Lead Status Distribution */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <LeadStatusStats />
+
+        {/* Placeholder for additional stats component */}
+        <Card>
           <CardHeader>
-            <CardTitle>Active Campaigns</CardTitle>
-            <CardDescription>Currently running call campaigns</CardDescription>
+            <CardTitle>Performance Metrics</CardTitle>
+            <CardDescription>
+              Key performance indicators for your campaigns
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Q1 Outreach</p>
-                  <p className="text-xs text-muted-foreground">125 / 500 calls</p>
-                </div>
-                <Badge variant="secondary">
-                  <PhoneCall className="mr-1 h-3 w-3" />
-                  Active
-                </Badge>
+                <span className="text-sm font-medium">Average Call Duration</span>
+                <span className="text-sm text-muted-foreground">
+                  {analytics?.average_call_duration || 0}s
+                </span>
               </div>
-              <div className="h-2 rounded-full bg-secondary">
-                <div className="h-2 rounded-full bg-primary" style={{ width: '25%' }} />
+              <Separator />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Success Rate</span>
+                <span className="text-sm text-muted-foreground">
+                  {analytics?.conversion_rate || 0}%
+                </span>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Total Campaigns</span>
+                <span className="text-sm text-muted-foreground">1 active</span>
               </div>
             </div>
           </CardContent>

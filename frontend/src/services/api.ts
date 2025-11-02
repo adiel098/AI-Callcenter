@@ -25,6 +25,21 @@ export const getLanguageDistribution = async () => {
   return response.data
 }
 
+export const getLeadStatusDistribution = async () => {
+  const response = await api.get('/analytics/lead-status-distribution')
+  return response.data
+}
+
+export const getRecentActivity = async (limit = 10) => {
+  const response = await api.get(`/analytics/recent-activity?limit=${limit}`)
+  return response.data
+}
+
+export const getActiveCampaigns = async () => {
+  const response = await api.get('/analytics/active-campaigns')
+  return response.data
+}
+
 // Leads
 export const getLeads = async (page = 1, pageSize = 50) => {
   const response = await api.get(`/leads/?page=${page}&page_size=${pageSize}`)

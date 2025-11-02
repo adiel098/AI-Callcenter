@@ -75,6 +75,20 @@ def initiate_call(self, lead_id: int):
 
             logger.info(f"[TOOLS] Initiating call to {lead.name} ({lead.phone}) with function calling enabled")
 
+            # Check if lead already has an active call (prevents duplicates)
+            active_call = db.query(Call).filter(
+                Call.lead_id == lead_id,
+                Call.ended_at.is_(None)
+            ).first()
+
+            if active_call:
+                logger.warning(f"Lead {lead_id} already has active call {active_call.id} (SID: {active_call.twilio_call_sid}), skipping duplicate")
+                return {
+                    "success": False,
+                    "error": "Call already in progress",
+                    "active_call_id": active_call.id
+                }
+
             # Update lead status
             lead.status = LeadStatus.CALLING
 

@@ -8,6 +8,7 @@ from typing import List
 import logging
 import sys
 import os
+import time
 
 # Ensure parent directory is in path for imports
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -79,11 +80,18 @@ async def start_campaign(campaign: CampaignCreate, db: Session = Depends(get_db)
                 # Queue Celery task with countdown for rate limiting
                 # Stagger calls by 5 seconds each to avoid overwhelming the system
                 countdown = queued_count * 5
+
+                # Generate unique task ID to prevent duplicate task queueing
+                # This ensures idempotency - if the same task is queued multiple times,
+                # only one will execute
+                task_id = f"initiate_call_lead_{lead.id}_{int(time.time())}"
+
                 # Use send_task with task name instead of importing the task function
                 celery_app.send_task(
                     'backend.workers.tasks.initiate_call',
                     args=[lead.id],
-                    countdown=countdown
+                    countdown=countdown,
+                    task_id=task_id  # Prevents duplicate tasks with same ID
                 )
 
                 queued_count += 1

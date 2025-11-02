@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getLeads, uploadLeadsCSV, createLead, startCampaign, deleteLead } from '../services/api';
 import { PageHeader } from '@/components/PageHeader';
@@ -72,6 +72,9 @@ export default function Leads() {
   const [isUploading, setIsUploading] = useState(false);
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isStartingCampaign, setIsStartingCampaign] = useState(false);
+
+  // Ref to track if campaign request is in flight (prevents double-submission)
+  const campaignRequestInFlight = useRef(false);
 
   // Add Lead form state
   const [newLead, setNewLead] = useState({
@@ -255,6 +258,12 @@ export default function Leads() {
   };
 
   const handleStartCampaign = async () => {
+    // Prevent duplicate submissions using ref (guards against rapid clicks)
+    if (campaignRequestInFlight.current) {
+      console.log('Campaign request already in progress, ignoring duplicate click');
+      return;
+    }
+
     // Filter pending leads
     const pendingLeads = leads.filter(lead => lead.status === 'pending');
 
@@ -272,7 +281,10 @@ export default function Leads() {
       return;
     }
 
+    // Mark request as in-flight IMMEDIATELY (before any async operations)
+    campaignRequestInFlight.current = true;
     setIsStartingCampaign(true);
+
     try {
       const leadIds = pendingLeads.map(lead => lead.id);
       const response = await startCampaign({
@@ -292,6 +304,7 @@ export default function Leads() {
       console.error(error);
     } finally {
       setIsStartingCampaign(false);
+      campaignRequestInFlight.current = false; // Reset flag after request completes
     }
   };
 

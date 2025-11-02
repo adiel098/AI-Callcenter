@@ -179,6 +179,14 @@ class CalendarService:
             available_slots = []
             current_time = start_date
 
+            # Round current_time to next half-hour boundary (00 or 30 minutes)
+            if current_time.minute < 30:
+                current_time = current_time.replace(minute=30, second=0, microsecond=0)
+            elif current_time.minute > 30:
+                current_time = current_time.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            else:
+                current_time = current_time.replace(second=0, microsecond=0)
+
             # Define working hours (9 AM - 5 PM)
             while current_time < end_date:
                 # Skip non-working hours
@@ -490,15 +498,17 @@ class CalendarService:
     def get_next_available_slots(self, count: int = 5, duration_minutes: int = 30) -> List[Dict]:
         """
         Get next available slots starting from tomorrow
+        Ensures all slots start at half-hour boundaries (:00 or :30)
 
         Args:
             count: Number of slots to return
             duration_minutes: Meeting duration
 
         Returns:
-            List of available slots
+            List of available slots with times rounded to half-hour increments
         """
         start_date = datetime.utcnow() + timedelta(days=1)
+        # Always start at 9:00 AM (already a half-hour boundary)
         start_date = start_date.replace(hour=9, minute=0, second=0, microsecond=0)
         end_date = start_date + timedelta(days=14)  # Look 2 weeks ahead
 

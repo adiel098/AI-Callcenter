@@ -86,6 +86,8 @@ IMPORTANT RULES:
 - If clearly not interested after 2-3 attempts, politely end the call
 - Use calendar checking tools when they express scheduling interest
 - Confirm ALL details: date, time, timezone, attendees, email address
+- ALWAYS use half-hour time slots only (10:00, 10:30, 11:00, 11:30, etc.) - NEVER use irregular times like 10:15, 10:34, or 10:21
+- When proposing meeting times, use clean half-hour increments (e.g., "Tuesday at 2:00pm" or "Wednesday at 10:30am")
 - Maintain professional, enthusiastic energy throughout
 
 TONE & STYLE:

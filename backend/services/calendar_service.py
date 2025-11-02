@@ -254,10 +254,7 @@ class CalendarService:
                 'dateTime': end_time.isoformat(),
                 'timeZone': 'UTC',
             },
-            # Add attendee so Google Calendar sends invite automatically
-            'attendees': [
-                {'email': attendee_email}
-            ],
+            # NOTE: Attendees field removed - service accounts can't add attendees
             'reminders': {
                 'useDefault': False,
                 'overrides': [
@@ -285,7 +282,7 @@ class CalendarService:
             insert_params = {
                 'calendarId': calendar_id,
                 'body': event,
-                'sendUpdates': 'all'  # Google Calendar sends invites to all attendees
+                'sendUpdates': 'none'  # No attendees, so no updates to send
             }
 
             if 'conferenceData' in event:

@@ -248,6 +248,11 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
             call.ended_at = datetime.utcnow()
             end_call = True
 
+        else:
+            # NEEDS_INFO, INTERESTED, SCHEDULE_MEETING - continue conversation
+            logger.info(f"Continuing conversation with intent: {intent}")
+            end_call = False
+
         db.commit()
 
         # Generate TwiML with AI response

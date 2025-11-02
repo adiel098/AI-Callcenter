@@ -205,6 +205,9 @@ class TwilioService:
             )
             gather.say(text, language=tts_language)
             response.append(gather)
+
+            # Fallback if no speech detected (keeps call alive and prompts user)
+            response.say("I didn't hear anything. Could you please speak?", language=tts_language)
         else:
             # End call
             response.say(text, language=tts_language)

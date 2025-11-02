@@ -295,6 +295,8 @@ def finalize_call(self, call_id: int):
             if meeting:
                 summary += f" | Meeting booked: {meeting.scheduled_time.isoformat()}"
 
+            # Store the summary in the database
+            call.summary = summary
             logger.info(f"[TOOLS] Call {call_id} summary: {summary}")
 
             db.commit()

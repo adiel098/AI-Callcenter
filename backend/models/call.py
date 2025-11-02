@@ -34,6 +34,7 @@ class Call(Base):
 
     # Call metadata
     transcript = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)  # AI-generated call summary (3-4 sentences)
     duration = Column(Float, nullable=True)  # Duration in seconds
     language = Column(String(10), nullable=True)  # Language used in call
     outcome = Column(

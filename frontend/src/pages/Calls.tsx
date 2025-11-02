@@ -12,6 +12,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -28,6 +35,7 @@ import {
   PhoneOff,
   PhoneMissed,
   Download,
+  FileText,
 } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
@@ -42,6 +50,7 @@ interface Call {
   outcome?: 'meeting_scheduled' | 'interested' | 'not_interested' | 'callback' | null;
   duration: number;
   created_at: string;
+  summary?: string;
   transcript?: Array<{
     role: 'user' | 'assistant';
     content: string;
@@ -67,6 +76,8 @@ const outcomeConfig = {
 export default function Calls() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryCall, setSummaryCall] = useState<Call | null>(null);
 
   const { data: callsData, isLoading } = useQuery({
     queryKey: ['calls'],
@@ -162,19 +173,34 @@ export default function Calls() {
     },
     {
       id: 'actions',
+      header: 'Actions',
       cell: ({ row }) => {
         const call = row.original;
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSelectedCall(call);
-              setTranscriptOpen(true);
-            }}
-          >
-            View Transcript
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSummaryCall(call);
+                setSummaryOpen(true);
+              }}
+              disabled={!call.summary}
+            >
+              <FileText className="mr-1 h-3 w-3" />
+              Summary
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedCall(call);
+                setTranscriptOpen(true);
+              }}
+            >
+              View Transcript
+            </Button>
+          </div>
         );
       },
     },
@@ -336,6 +362,106 @@ export default function Calls() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Summary Dialog */}
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Call Summary
+            </DialogTitle>
+            <DialogDescription>
+              {summaryCall?.lead_name} • {summaryCall?.phone}
+            </DialogDescription>
+          </DialogHeader>
+
+          {summaryCall && (
+            <div className="space-y-4">
+              {/* Call Info */}
+              <div className="grid grid-cols-3 gap-4 rounded-lg border p-4 bg-muted/50">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Status</p>
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      'font-medium',
+                      statusConfig[summaryCall.status].color
+                    )}
+                  >
+                    {statusConfig[summaryCall.status].label}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Duration</p>
+                  <p className="text-sm font-medium">
+                    {Math.floor(summaryCall.duration / 60)}:
+                    {(summaryCall.duration % 60).toString().padStart(2, '0')}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Date</p>
+                  <p className="text-sm font-medium">
+                    {format(new Date(summaryCall.created_at), 'MMM d, yyyy')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Summary Content */}
+              <div className="rounded-lg border p-6 bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/10 p-2 mt-1">
+                    <Bot className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      AI-Generated Summary
+                    </h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {summaryCall.summary || 'No summary available for this call.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {summaryCall.outcome && (
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <span className="text-sm font-medium text-muted-foreground">Outcome</span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'font-medium',
+                      outcomeConfig[summaryCall.outcome].color
+                    )}
+                  >
+                    {outcomeConfig[summaryCall.outcome].label}
+                  </Badge>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setSummaryOpen(false);
+                    setSelectedCall(summaryCall);
+                    setTranscriptOpen(true);
+                  }}
+                >
+                  View Full Transcript
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => setSummaryOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

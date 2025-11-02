@@ -30,6 +30,7 @@ class CallResponse(BaseModel):
     twilio_call_sid: Optional[str]
     recording_url: Optional[str]
     transcript: Optional[str]
+    summary: Optional[str]
     duration: Optional[float]
     language: Optional[str]
     outcome: str
@@ -71,6 +72,7 @@ async def get_calls(
                 twilio_call_sid=call.twilio_call_sid,
                 recording_url=call.recording_url,
                 transcript=call.transcript,
+                summary=call.summary,
                 duration=call.duration,
                 language=call.language,
                 outcome=call.outcome.value,
@@ -104,6 +106,7 @@ async def get_call(call_id: int, db: Session = Depends(get_db)):
         twilio_call_sid=call.twilio_call_sid,
         recording_url=call.recording_url,
         transcript=call.transcript,
+        summary=call.summary,
         duration=call.duration,
         language=call.language,
         outcome=call.outcome.value,

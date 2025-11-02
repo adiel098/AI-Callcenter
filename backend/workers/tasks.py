@@ -11,6 +11,7 @@ from backend.database import get_db_context
 from backend.models import Lead, Call, CallOutcome, LeadStatus, Meeting, MeetingStatus, ConversationHistory, SpeakerRole
 from backend.services import TwilioService, SpeechService, CalendarService
 from backend.services.llm_service import LLMService, ConversationIntent
+from backend.services.zoom_service import ZoomService
 from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ class CallTask(Task):
     _speech = None
     _llm = None
     _calendar = None
+    _zoom = None
 
     @property
     def twilio(self):
@@ -45,8 +47,11 @@ class CallTask(Task):
     def llm(self):
         """LLM service with function calling for conversation"""
         if self._llm is None:
-            # Initialize LLM with calendar service for tool execution
-            self._llm = LLMService(calendar_service=self.calendar)
+            # Initialize LLM with calendar and zoom services for tool execution
+            self._llm = LLMService(
+                calendar_service=self.calendar,
+                zoom_service=self.zoom
+            )
         return self._llm
 
     @property
@@ -55,6 +60,13 @@ class CallTask(Task):
         if self._calendar is None:
             self._calendar = CalendarService()
         return self._calendar
+
+    @property
+    def zoom(self):
+        """Zoom service for video conference links"""
+        if self._zoom is None:
+            self._zoom = ZoomService()
+        return self._zoom
 
 
 @celery_app.task(base=CallTask, bind=True, max_retries=3)
@@ -210,6 +222,9 @@ def process_conversation_turn(
                         meeting_args = tool_call['args']
                         meeting_datetime = datetime.fromisoformat(meeting_args['datetime'])
 
+                        # Get Zoom meeting link only
+                        meeting_link = tool_call['result'].get('zoom_link')
+
                         meeting = Meeting(
                             lead_id=lead.id,
                             call_id=call.id,
@@ -217,7 +232,7 @@ def process_conversation_turn(
                             guest_email=meeting_args['guest_email'],
                             calendar_event_id=tool_call['result'].get('event_id'),
                             duration=meeting_args.get('duration_minutes', 30),  # Default 30 minutes
-                            meeting_link=tool_call['result'].get('google_meet_link'),  # Google Meet link
+                            meeting_link=meeting_link,  # Zoom link only
                             status=MeetingStatus.SCHEDULED
                         )
                         db.add(meeting)
@@ -226,7 +241,7 @@ def process_conversation_turn(
                         call.outcome = CallOutcome.INTERESTED  # Meeting scheduled = interested
                         lead.status = LeadStatus.MEETING_SCHEDULED
 
-                        logger.info(f"[TOOLS] ✅ Meeting booked! Event ID: {meeting.calendar_event_id}")
+                        logger.info(f"[TOOLS] ✅ Meeting booked! Event ID: {meeting.calendar_event_id}, Link: {meeting_link}")
 
             # Save AI response
             ai_turn = ConversationHistory(

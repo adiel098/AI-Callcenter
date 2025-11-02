@@ -249,12 +249,17 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
                     meeting_args = tool_call['args']
                     meeting_datetime = datetime.fromisoformat(meeting_args['datetime'])
 
+                    # Get Zoom meeting link only
+                    meeting_link = tool_call['result'].get('zoom_link')
+
                     meeting = Meeting(
                         lead_id=lead.id,
                         call_id=call.id,
                         scheduled_time=meeting_datetime,
                         guest_email=meeting_args['guest_email'],
-                        calendar_event_id=tool_call['result'].get('meeting_id'),
+                        calendar_event_id=tool_call['result'].get('event_id'),
+                        duration=meeting_args.get('duration_minutes', 30),
+                        meeting_link=meeting_link,
                         status=MeetingStatus.SCHEDULED
                     )
                     db.add(meeting)
@@ -264,7 +269,7 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
                     if lead:
                         lead.status = LeadStatus.MEETING_SCHEDULED
 
-                    logger.info(f"✅ Meeting booked! Event ID: {meeting.calendar_event_id}")
+                    logger.info(f"✅ Meeting booked! Event ID: {meeting.calendar_event_id}, Link: {meeting_link}")
 
         # Save AI response
         ai_turn = ConversationHistory(

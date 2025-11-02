@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move llm_service_with_tools.py llm_service.py)",
+      "Bash(pip install:*)",
+      "Bash(git init:*)",
+      "Bash(test:*)",
+      "Bash(cat:*)",
+      "Bash(gh --version:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

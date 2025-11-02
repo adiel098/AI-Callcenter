@@ -41,18 +41,8 @@ export default function Analytics() {
     queryFn: getLanguageDistribution,
   });
 
-  // Transform call outcomes for charts
-  const callOutcomes = callOutcomesData?.outcomes?.map((item: any) => ({
-    name: item.outcome,
-    value: item.count,
-    color: getOutcomeColor(item.outcome),
-  })) || [];
-
-  // Transform language distribution for charts
-  const languageData = languageDistData?.languages?.map((item: any) => ({
-    language: item.language.toUpperCase(),
-    calls: item.count,
-  })) || [];
+  // Define color palette before using it
+  const COLORS = ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
   function getOutcomeColor(outcome: string): string {
     const colorMap: Record<string, string> = {
@@ -68,7 +58,18 @@ export default function Analytics() {
     return colorMap[outcome] || COLORS[0];
   }
 
-  const COLORS = ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+  // Transform call outcomes for charts
+  const callOutcomes = callOutcomesData?.outcomes?.map((item: any) => ({
+    name: item.outcome,
+    value: item.count,
+    color: getOutcomeColor(item.outcome),
+  })) || [];
+
+  // Transform language distribution for charts
+  const languageData = languageDistData?.languages?.map((item: any) => ({
+    language: item.language.toUpperCase(),
+    calls: item.count,
+  })) || [];
 
   return (
     <div className="space-y-8">

@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import json
 
-from config import get_settings
+from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

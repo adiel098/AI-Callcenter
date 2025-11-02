@@ -9,9 +9,9 @@ import csv
 import io
 import logging
 
-from database import get_db
-from models import Lead, LeadStatus
-from utils.language_detector import detect_language_from_phone
+from backend.database import get_db
+from backend.models import Lead, LeadStatus
+from backend.utils.language_detector import detect_language_from_phone
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

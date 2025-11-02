@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 import logging
 from datetime import datetime
 
-from database import get_db
-from models import Call, CallOutcome, Lead, LeadStatus
-from services import TwilioService
+from backend.database import get_db
+from backend.models import Call, CallOutcome, Lead, LeadStatus
+from backend.services import TwilioService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -144,9 +144,9 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
             return Response(content=twiml, media_type="application/xml")
 
         # Import Celery task
-        from workers.tasks import process_conversation_turn
-        from models import ConversationHistory, SpeakerRole, Lead, ConversationIntent
-        from services import LLMService, CalendarService
+        from backend.workers.tasks import process_conversation_turn
+        from backend.models import ConversationHistory, SpeakerRole, Lead, ConversationIntent
+        from backend.services import LLMService, CalendarService
 
         # Get language
         language = call.language or 'en'
@@ -193,7 +193,7 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
 
         # Handle tool calls (e.g., meeting booking)
         if tool_calls:
-            from models import Meeting, MeetingStatus, CallOutcome, LeadStatus
+            from backend.models import Meeting, MeetingStatus, CallOutcome, LeadStatus
             from datetime import datetime
 
             for tool_call in tool_calls:

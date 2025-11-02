@@ -9,8 +9,8 @@ import logging
 from typing import Optional, AsyncIterator
 import io
 
-from config import get_settings
-from utils.language_detector import get_deepgram_language_code, get_voice_for_language
+from backend.config import get_settings
+from backend.utils.language_detector import get_deepgram_language_code, get_voice_for_language
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

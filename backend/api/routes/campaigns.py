@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from typing import List
 import logging
 
-from database import get_db
-from models import Lead, LeadStatus
+from backend.database import get_db
+from backend.models import Lead, LeadStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -51,7 +51,7 @@ async def start_campaign(campaign: CampaignCreate, db: Session = Depends(get_db)
             )
 
         # Queue leads for calling with Celery
-        from workers.tasks import initiate_call
+        from backend.workers.tasks import initiate_call
         import time
 
         queued_count = 0

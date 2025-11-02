@@ -6,12 +6,12 @@ from celery import Task
 import logging
 from datetime import datetime, timedelta
 
-from workers.celery_app import celery_app
-from database import get_db_context
-from models import Lead, Call, CallOutcome, LeadStatus, Meeting, MeetingStatus, ConversationHistory, SpeakerRole
-from services import TwilioService, SpeechService, CalendarService
-from services.llm_service import LLMService, ConversationIntent
-from config import get_settings
+from backend.workers.celery_app import celery_app
+from backend.database import get_db_context
+from backend.models import Lead, Call, CallOutcome, LeadStatus, Meeting, MeetingStatus, ConversationHistory, SpeakerRole
+from backend.services import TwilioService, SpeechService, CalendarService
+from backend.services.llm_service import LLMService, ConversationIntent
+from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

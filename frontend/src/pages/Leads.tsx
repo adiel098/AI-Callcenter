@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, uploadLeadsCSV, createLead } from '../services/api';
+import { getLeads, uploadLeadsCSV, createLead, startCampaign } from '../services/api';
 import { PageHeader } from '@/components/PageHeader';
 import { DataTable } from '@/components/DataTable';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import {
   Phone as PhoneIcon,
   Users,
   FileText,
+  Rocket,
 } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -72,6 +73,7 @@ export default function Leads() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isAddingLead, setIsAddingLead] = useState(false);
+  const [isStartingCampaign, setIsStartingCampaign] = useState(false);
 
   // Add Lead form state
   const [newLead, setNewLead] = useState({
@@ -258,6 +260,47 @@ export default function Leads() {
     }
   };
 
+  const handleStartCampaign = async () => {
+    // Filter pending leads
+    const pendingLeads = leads.filter(lead => lead.status === 'pending');
+
+    if (pendingLeads.length === 0) {
+      toast.error('No pending leads to call. Please add leads or check their status.');
+      return;
+    }
+
+    // Confirm action
+    const confirmed = window.confirm(
+      `Start campaign to call ${pendingLeads.length} pending lead(s)? Calls will be queued and initiated automatically.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsStartingCampaign(true);
+    try {
+      const leadIds = pendingLeads.map(lead => lead.id);
+      const response = await startCampaign({
+        name: `Campaign ${new Date().toLocaleString()}`,
+        lead_ids: leadIds,
+      });
+
+      toast.success(response.message || `Campaign started! ${response.queued_leads} leads queued for calling.`);
+
+      // Refresh leads list to show updated statuses
+      setTimeout(() => {
+        refetch();
+      }, 1000);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || 'Failed to start campaign. Please try again.';
+      toast.error(errorMessage);
+      console.error(error);
+    } finally {
+      setIsStartingCampaign(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -269,9 +312,16 @@ export default function Leads() {
               <Plus className="mr-2 h-4 w-4" />
               Add Lead
             </Button>
-            <Button onClick={() => setUploadDialogOpen(true)}>
+            <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Upload CSV
+            </Button>
+            <Button
+              onClick={handleStartCampaign}
+              disabled={isStartingCampaign || leads.filter(l => l.status === 'pending').length === 0}
+            >
+              <Rocket className="mr-2 h-4 w-4" />
+              {isStartingCampaign ? 'Starting Campaign...' : 'Start Campaign'}
             </Button>
           </>
         }

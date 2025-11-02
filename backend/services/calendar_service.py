@@ -15,7 +15,7 @@ from pathlib import Path
 import pickle
 import os
 
-from config import get_settings
+from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

@@ -7,8 +7,8 @@ from typing import List, Optional
 from pydantic import BaseModel
 import logging
 
-from database import get_db
-from models import Meeting, MeetingStatus
+from backend.database import get_db
+from backend.models import Meeting, MeetingStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCalls } from '../services/api';
+import { getCalls, getCallDetails } from '../services/api';
 import { PageHeader } from '@/components/PageHeader';
 import { DataTable } from '@/components/DataTable';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,8 @@ import {
   PhoneMissed,
   Download,
   FileText,
+  Volume2,
+  Loader2,
 } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
@@ -58,6 +60,16 @@ interface Call {
   language?: string;
 }
 
+interface ConversationMessage {
+  role: 'ai' | 'user' | 'system';
+  message: string;
+  created_at: string;
+}
+
+interface CallDetails extends Call {
+  conversation_history: ConversationMessage[];
+}
+
 // Match backend CallOutcome enum values
 const outcomeConfig: Record<string, { label: string; color: string; icon: any }> = {
   completed: { label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
@@ -73,9 +85,11 @@ const outcomeConfig: Record<string, { label: string; color: string; icon: any }>
 
 export default function Calls() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [selectedCallDetails, setSelectedCallDetails] = useState<CallDetails | null>(null);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryCall, setSummaryCall] = useState<Call | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const { data: callsData, isLoading } = useQuery({
     queryKey: ['calls'],
@@ -180,9 +194,18 @@ export default function Calls() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
                 setSelectedCall(call);
                 setTranscriptOpen(true);
+                setLoadingDetails(true);
+                try {
+                  const details = await getCallDetails(call.id);
+                  setSelectedCallDetails(details);
+                } catch (error) {
+                  console.error('Failed to fetch call details:', error);
+                } finally {
+                  setLoadingDetails(false);
+                }
               }}
             >
               View Transcript
@@ -265,6 +288,26 @@ export default function Calls() {
                 </div>
               </div>
 
+              {/* Call Recording */}
+              {selectedCallDetails?.recording_url && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-semibold">Call Recording</h3>
+                  </div>
+                  <div className="rounded-lg border p-4 bg-muted/30">
+                    <audio
+                      controls
+                      className="w-full"
+                      style={{ height: '40px' }}
+                    >
+                      <source src={selectedCallDetails.recording_url} type="audio/mpeg" />
+                      Your browser does not support the audio element.
+                    </audio>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-semibold">Conversation</h3>
                 <Button variant="outline" size="sm">
@@ -275,21 +318,73 @@ export default function Calls() {
 
               <Separator />
 
-              {/* Transcript */}
+              {/* Chat-style Conversation */}
               <ScrollArea className="h-[500px] pr-4">
-                <div className="space-y-2">
-                  {selectedCall.transcript ? (
-                    <div className="rounded-lg border p-4 bg-muted/30">
-                      <pre className="text-sm whitespace-pre-wrap font-sans">
-                        {selectedCall.transcript}
-                      </pre>
-                    </div>
-                  ) : (
-                    <div className="text-center text-sm text-muted-foreground py-8">
-                      No transcript available for this call
-                    </div>
-                  )}
-                </div>
+                {loadingDetails ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : selectedCallDetails?.conversation_history && selectedCallDetails.conversation_history.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedCallDetails.conversation_history.map((msg, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                        className={cn(
+                          'flex gap-3',
+                          msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+                        )}
+                      >
+                        {/* Avatar */}
+                        <Avatar className={cn(
+                          'h-8 w-8 flex-shrink-0',
+                          msg.role === 'system' && 'opacity-60'
+                        )}>
+                          <AvatarFallback className={cn(
+                            msg.role === 'ai' && 'bg-primary/10 text-primary',
+                            msg.role === 'user' && 'bg-blue-100 text-blue-700',
+                            msg.role === 'system' && 'bg-gray-100 text-gray-600'
+                          )}>
+                            {msg.role === 'ai' ? <Bot className="h-4 w-4" /> : msg.role === 'user' ? <User className="h-4 w-4" /> : 'S'}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        {/* Message Bubble */}
+                        <div className={cn(
+                          'flex flex-col gap-1 max-w-[80%]',
+                          msg.role === 'user' && 'items-end'
+                        )}>
+                          <div className={cn(
+                            'rounded-2xl px-4 py-2.5 shadow-sm',
+                            msg.role === 'ai' && 'bg-muted/50 border',
+                            msg.role === 'user' && 'bg-primary text-primary-foreground',
+                            msg.role === 'system' && 'bg-yellow-50 border border-yellow-200 text-yellow-900'
+                          )}>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                              {msg.message}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground px-2">
+                            {format(new Date(msg.created_at), 'HH:mm:ss')}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : selectedCall?.transcript ? (
+                  // Fallback to plain transcript if conversation history not available
+                  <div className="rounded-lg border p-4 bg-muted/30">
+                    <pre className="text-sm whitespace-pre-wrap font-sans">
+                      {selectedCall.transcript}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="text-center text-sm text-muted-foreground py-8">
+                    No conversation available for this call
+                  </div>
+                )}
               </ScrollArea>
             </div>
           )}

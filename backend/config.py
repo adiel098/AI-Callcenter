@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     google_calendar_id: str
     google_delegated_user_email: Optional[str] = None  # For Domain-Wide Delegation
 
+    # Zoom (optional - for video conference links)
+    zoom_account_id: Optional[str] = None
+    zoom_client_id: Optional[str] = None
+    zoom_client_secret: Optional[str] = None
+
     # Email/SMTP (for sending calendar invites)
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587

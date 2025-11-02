@@ -38,6 +38,10 @@ import {
   FileText,
   Volume2,
   Loader2,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
 } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
@@ -290,22 +294,74 @@ export default function Calls() {
 
               {/* Call Recording */}
               {selectedCallDetails?.recording_url && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Volume2 className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="text-sm font-semibold">Call Recording</h3>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="rounded-xl border bg-gradient-to-br from-primary/5 via-purple-50/50 to-blue-50/50 dark:from-primary/10 dark:via-purple-950/20 dark:to-blue-950/20 p-6 shadow-sm"
+                >
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-full bg-primary/10 p-2.5">
+                          <Volume2 className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground">Call Recording</h3>
+                          <p className="text-xs text-muted-foreground">Listen to the full conversation</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        <Phone className="mr-1 h-3 w-3" />
+                        Available
+                      </Badge>
+                    </div>
+
+                    {/* Audio Player */}
+                    <div className="rounded-lg bg-white/80 dark:bg-gray-900/50 border p-4 backdrop-blur-sm">
+                      <audio
+                        controls
+                        className="w-full"
+                        preload="metadata"
+                        style={{
+                          height: '48px',
+                          filter: 'brightness(0.95)',
+                        }}
+                      >
+                        <source src={selectedCallDetails.recording_url} type="audio/mpeg" />
+                        Your browser does not support the audio element.
+                      </audio>
+                    </div>
+
+                    {/* Info Footer */}
+                    <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                        <span>Recording ready</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            const audio = document.querySelector('audio');
+                            if (audio) {
+                              const link = document.createElement('a');
+                              link.href = selectedCallDetails.recording_url!;
+                              link.download = `call-${selectedCall?.id}-recording.mp3`;
+                              link.click();
+                            }
+                          }}
+                        >
+                          <Download className="mr-1 h-3 w-3" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-lg border p-4 bg-muted/30">
-                    <audio
-                      controls
-                      className="w-full"
-                      style={{ height: '40px' }}
-                    >
-                      <source src={selectedCallDetails.recording_url} type="audio/mpeg" />
-                      Your browser does not support the audio element.
-                    </audio>
-                  </div>
-                </div>
+                </motion.div>
               )}
 
               <div className="flex justify-between items-center">

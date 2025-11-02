@@ -32,7 +32,9 @@
       "Bash(findstr:*)",
       "Bash(docker ps:*)",
       "Bash(Select-String -Pattern \"Test Summary|PASSED|FAILED|Total:|SUCCESS|WARNING|===|PASS|FAIL\")",
-      "Bash(timeout 10 bash:*)"
+      "Bash(timeout 10 bash:*)",
+      "Bash(export DATABASE_URL=\"sqlite:///./ai_scheduler.db\")",
+      "Bash(DATABASE_URL=\"sqlite:///./ai_scheduler.db\" uvicorn:*)"
     ],
     "deny": [],
     "ask": []

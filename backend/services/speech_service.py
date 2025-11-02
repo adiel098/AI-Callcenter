@@ -1,7 +1,7 @@
 """
 Speech services for STT (Deepgram) and TTS (ElevenLabs)
 """
-from deepgram import DeepgramClient, PrerecordedOptions, FileSource
+from deepgram import DeepgramClient
 import elevenlabs
 from elevenlabs import Voice, VoiceSettings
 import httpx
@@ -20,8 +20,8 @@ class SpeechService:
     """Service for speech-to-text and text-to-speech operations"""
 
     def __init__(self):
-        # Initialize Deepgram client (v3 SDK)
-        self.deepgram_client = DeepgramClient(settings.deepgram_api_key)
+        # Initialize Deepgram client (v5 SDK)
+        self.deepgram_client = DeepgramClient(api_key=settings.deepgram_api_key)
 
         # Initialize ElevenLabs API key
         elevenlabs.set_api_key(settings.elevenlabs_api_key)
@@ -45,26 +45,28 @@ class SpeechService:
             # Convert language code to Deepgram format
             deepgram_language = get_deepgram_language_code(language)
 
-            # Configure Deepgram options (v3 SDK)
-            options = PrerecordedOptions(
-                model="nova-2",
-                language=deepgram_language,
-                smart_format=True,
-                punctuate=True,
-                diarize=False
-            )
+            # Configure Deepgram options (v5 SDK) - passed as dict
+            options = {
+                "model": "nova-2",
+                "language": deepgram_language,
+                "smart_format": True,
+                "punctuate": True,
+                "diarize": False
+            }
 
-            # Create payload (v3 SDK)
-            payload = FileSource(buffer=audio_data)
+            # Create payload (v5 SDK)
+            payload = {
+                "buffer": audio_data,
+            }
 
-            # Transcribe
-            response = self.deepgram_client.listen.rest.v("1").transcribe_file(
+            # Transcribe using v5 API
+            response = self.deepgram_client.listen.v1.media.transcribe_file(
                 payload,
                 options
             )
 
-            # Extract transcript
-            if response.results and response.results.channels:
+            # Extract transcript (v5 API response structure)
+            if response and response.results and response.results.channels:
                 transcript = response.results.channels[0].alternatives[0].transcript
                 logger.info(f"Transcribed ({language}): {transcript[:100]}...")
                 return transcript.strip()

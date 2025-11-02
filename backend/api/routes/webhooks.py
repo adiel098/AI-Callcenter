@@ -9,6 +9,7 @@ from datetime import datetime
 from backend.database import get_db
 from backend.models import Call, CallOutcome, Lead, LeadStatus, Meeting, MeetingStatus
 from backend.services import TwilioService
+from backend.workers.tasks import finalize_call
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,6 +55,10 @@ async def twilio_status_callback(request: Request, db: Session = Depends(get_db)
             lead = db.query(Lead).filter(Lead.id == call.lead_id).first()
             if lead:
                 lead.status = LeadStatus.CONTACTED
+
+            # Trigger finalization task to generate transcript and summary
+            finalize_call.delay(call.id)
+            logger.info(f"Triggered finalize_call task for call {call.id}")
 
         elif call_status in ['busy', 'no-answer', 'failed']:
             call.ended_at = datetime.utcnow()

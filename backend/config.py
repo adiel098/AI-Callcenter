@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     # Email/SMTP (for sending calendar invites)
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
-    smtp_user: str
-    smtp_password: str
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
     company_name: str = "Alta AI"
 
     # Application

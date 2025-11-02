@@ -3,6 +3,7 @@ Application configuration management
 """
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -39,7 +40,7 @@ class Settings(BaseSettings):
     secret_key: str
 
     # Monitoring
-    sentry_dsn: str | None = None
+    sentry_dsn: Optional[str] = None
 
     # Call Settings
     max_concurrent_calls: int = 50

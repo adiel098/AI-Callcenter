@@ -5,9 +5,9 @@ python-multipart==0.0.6
 websockets==12.0
 
 # Database
-sqlalchemy==2.0.25
+sqlalchemy==2.0.36
 alembic==1.13.1
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 
 # Task Queue
 celery[redis]==5.3.6
@@ -16,7 +16,7 @@ redis==5.0.1
 # API Clients
 twilio==8.11.1
 openai==1.10.0
-elevenlabs==0.2.27
+elevenlabs==2.21.0
 google-api-python-client==2.116.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.0
@@ -24,8 +24,8 @@ deepgram-sdk==3.2.0
 
 # Utilities
 python-dotenv==1.0.0
-pydantic==2.5.3
-pydantic-settings==2.1.0
+pydantic==2.10.6
+pydantic-settings==2.7.1
 httpx==0.26.0
 
 # Monitoring

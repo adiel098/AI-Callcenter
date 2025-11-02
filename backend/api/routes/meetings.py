@@ -3,7 +3,7 @@ Meetings API routes
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import logging
 
@@ -18,10 +18,10 @@ router = APIRouter()
 class MeetingResponse(BaseModel):
     id: int
     lead_id: int
-    call_id: int | None
+    call_id: Optional[int]
     scheduled_time: str
-    guest_email: str | None
-    calendar_event_id: str | None
+    guest_email: Optional[str]
+    calendar_event_id: Optional[str]
     status: str
     created_at: str
 
@@ -33,7 +33,7 @@ class MeetingResponse(BaseModel):
 async def get_meetings(
     page: int = 1,
     page_size: int = 50,
-    status: str | None = None,
+    status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """Get list of meetings"""

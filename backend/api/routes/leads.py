@@ -3,7 +3,7 @@ Leads API routes
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, EmailStr
 import csv
 import io
@@ -21,16 +21,16 @@ router = APIRouter()
 class LeadCreate(BaseModel):
     name: str
     phone: str
-    email: EmailStr | None = None
+    email: Optional[EmailStr] = None
 
 
 class LeadResponse(BaseModel):
     id: int
     name: str
     phone: str
-    email: str | None
-    country_code: str | None
-    language: str | None
+    email: Optional[str]
+    country_code: Optional[str]
+    language: Optional[str]
     status: str
     created_at: str
 
@@ -89,7 +89,7 @@ async def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
 async def get_leads(
     page: int = 1,
     page_size: int = 50,
-    status: str | None = None,
+    status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """Get list of leads with pagination"""

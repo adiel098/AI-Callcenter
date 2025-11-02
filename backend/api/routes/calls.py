@@ -3,7 +3,7 @@ Calls API routes
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import logging
 
@@ -27,14 +27,14 @@ class ConversationTurn(BaseModel):
 class CallResponse(BaseModel):
     id: int
     lead_id: int
-    twilio_call_sid: str | None
-    recording_url: str | None
-    transcript: str | None
-    duration: float | None
-    language: str | None
+    twilio_call_sid: Optional[str]
+    recording_url: Optional[str]
+    transcript: Optional[str]
+    duration: Optional[float]
+    language: Optional[str]
     outcome: str
     started_at: str
-    ended_at: str | None
+    ended_at: Optional[str]
 
     class Config:
         from_attributes = True
@@ -48,7 +48,7 @@ class CallDetailResponse(CallResponse):
 async def get_calls(
     page: int = 1,
     page_size: int = 50,
-    outcome: str | None = None,
+    outcome: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """Get list of calls with pagination"""

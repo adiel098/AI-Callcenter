@@ -8,7 +8,18 @@
       "Bash(cat:*)",
       "Bash(gh --version:*)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(uvicorn:*)",
+      "Bash(python:*)",
+      "Bash(where:*)",
+      "Bash(py --list:*)",
+      "Bash(py -3.13 --version:*)",
+      "Bash(py -3.13 -m pip install:*)",
+      "Bash(py -3.13 -m celery:*)",
+      "Bash(py:*)"
     ],
     "deny": [],
     "ask": []

@@ -312,17 +312,8 @@ def finalize_call(self, call_id: int):
         return {"success": False, "error": str(e)}
 
 
-# Export both versions for backward compatibility
-from backend.workers.tasks import initiate_call, process_conversation_turn, schedule_meeting, finalize_call
-
 __all__ = [
-    # Original versions
     "initiate_call",
     "process_conversation_turn",
-    "schedule_meeting",
-    "finalize_call",
-    # New versions with tools
-    "initiate_call_with_tools",
-    "process_conversation_with_tools",
-    "finalize_call_with_tools"
+    "finalize_call"
 ]

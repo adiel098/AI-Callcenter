@@ -2,8 +2,7 @@
 Speech services for STT (Deepgram) and TTS (ElevenLabs)
 """
 from deepgram import DeepgramClient, PrerecordedOptions, LiveOptions
-from elevenlabs.client import ElevenLabs
-from elevenlabs import Voice, VoiceSettings
+from elevenlabs import ElevenLabs, Voice, VoiceSettings
 import httpx
 import logging
 from typing import Optional, AsyncIterator

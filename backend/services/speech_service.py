@@ -1,7 +1,7 @@
 """
 Speech services for STT (Deepgram) and TTS (ElevenLabs)
 """
-from deepgram import DeepgramClient, PrerecordedOptions, LiveOptions
+from deepgram import Deepgram
 from elevenlabs import ElevenLabs, Voice, VoiceSettings
 import httpx
 import logging
@@ -20,7 +20,7 @@ class SpeechService:
 
     def __init__(self):
         # Initialize Deepgram client
-        self.deepgram_client = DeepgramClient(settings.deepgram_api_key)
+        self.deepgram_client = Deepgram(settings.deepgram_api_key)
 
         # Initialize ElevenLabs client
         self.elevenlabs_client = ElevenLabs(api_key=settings.elevenlabs_api_key)
@@ -45,13 +45,13 @@ class SpeechService:
             deepgram_language = get_deepgram_language_code(language)
 
             # Configure Deepgram options
-            options = PrerecordedOptions(
-                model="nova-2",
-                language=deepgram_language,
-                smart_format=True,
-                punctuate=True,
-                diarize=False
-            )
+            options = {
+                "model": "nova-2",
+                "language": deepgram_language,
+                "smart_format": True,
+                "punctuate": True,
+                "diarize": False
+            }
 
             # Create payload
             payload = {"buffer": audio_data}

@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 
 from backend.database import get_db
-from backend.models import Call, CallOutcome, Lead, LeadStatus
+from backend.models import Call, CallOutcome, Lead, LeadStatus, Meeting, MeetingStatus
 from backend.services import TwilioService
 
 logger = logging.getLogger(__name__)
@@ -193,9 +193,6 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
 
         # Handle tool calls (e.g., meeting booking)
         if tool_calls:
-            from backend.models import Meeting, MeetingStatus, CallOutcome, LeadStatus
-            from datetime import datetime
-
             for tool_call in tool_calls:
                 logger.info(f"Tool executed: {tool_call['tool']}")
 

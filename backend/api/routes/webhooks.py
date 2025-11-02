@@ -197,6 +197,7 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
         from backend.workers.tasks import process_conversation_turn
         from backend.models import ConversationHistory, SpeakerRole, Lead
         from backend.services import LLMService, CalendarService
+        from backend.services.zoom_service import ZoomService
         from backend.services.llm_service import ConversationIntent
 
         # Get language

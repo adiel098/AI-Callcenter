@@ -16,7 +16,7 @@ import sentry_sdk
 
 from backend.config import get_settings
 from backend.database import init_db
-from backend.api.routes import leads, calls, meetings, campaigns, analytics, webhooks
+from backend.api.routes import leads, calls, meetings, campaigns, analytics, webhooks, partners
 from backend.api.routes import settings as settings_routes
 
 # Configure logging
@@ -59,6 +59,7 @@ app.include_router(campaigns.router, prefix="/api/campaigns", tags=["campaigns"]
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 app.include_router(settings_routes.router, prefix="/api", tags=["settings"])
+app.include_router(partners.router, prefix="/api/partners", tags=["partners"])
 
 
 @app.on_event("startup")

@@ -7,6 +7,7 @@ from .call import Call, CallOutcome
 from .meeting import Meeting, MeetingStatus
 from .conversation_history import ConversationHistory, SpeakerRole
 from .partner import Partner
+from .setting import Setting
 
 __all__ = [
     "Base",
@@ -14,5 +15,6 @@ __all__ = [
     "Call", "CallOutcome",
     "Meeting", "MeetingStatus",
     "ConversationHistory", "SpeakerRole",
-    "Partner"
+    "Partner",
+    "Setting"
 ]

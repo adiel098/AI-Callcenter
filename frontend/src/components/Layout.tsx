@@ -16,6 +16,7 @@ import {
   User,
   Moon,
   Sun,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -77,6 +78,13 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex-1" />
 
           {/* Top Bar Actions */}
+          <Link to="/documentation">
+            <Button variant="outline" size="sm" className="hidden md:inline-flex gap-2">
+              <BookOpen className="h-4 w-4" />
+              API Docs
+            </Button>
+          </Link>
+
           <Button variant="ghost" size="icon" className="hidden md:inline-flex">
             <Search className="h-5 w-5" />
           </Button>

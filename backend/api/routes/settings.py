@@ -188,6 +188,50 @@ def clear_settings_cache():
 
 # Voice Settings Endpoints
 
+@router.get("/voices/preview/{voice_id}")
+async def preview_voice(voice_id: str):
+    """
+    Generate a preview audio sample for a specific voice.
+
+    Returns an MP3 audio file that can be played in the browser.
+    """
+    try:
+        from fastapi.responses import Response
+
+        speech_service = SpeechService()
+
+        # Sample text for preview
+        preview_text = "Hello! This is a preview of my voice. I'm ready to help you schedule meetings with your leads."
+
+        # Generate audio
+        audio_data = await speech_service.synthesize_speech(
+            text=preview_text,
+            language="en",
+            voice_id=voice_id
+        )
+
+        if not audio_data:
+            raise HTTPException(status_code=500, detail="Failed to generate voice preview")
+
+        logger.info(f"Generated voice preview for {voice_id}: {len(audio_data)} bytes")
+
+        # Return audio as MP3
+        return Response(
+            content=audio_data,
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": f"inline; filename=voice_preview_{voice_id}.mp3",
+                "Cache-Control": "public, max-age=3600"  # Cache for 1 hour
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating voice preview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/voices", response_model=list[VoiceInfo])
 def get_available_voices():
     """

@@ -10,8 +10,10 @@ import io
 import logging
 
 from backend.database import get_db
-from backend.models import Lead, LeadStatus
+from backend.models import Lead, LeadStatus, Partner
 from backend.utils.language_detector import detect_language_from_phone
+from backend.utils.auth import verify_api_key
+from backend.utils.rate_limiter import rate_limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -237,3 +239,171 @@ async def delete_lead(lead_id: int, db: Session = Depends(get_db)):
     logger.info(f"Lead deleted: {lead_id}")
 
     return {"success": True, "message": "Lead deleted"}
+
+
+# Partner API Transfer Schemas
+class LeadTransferItem(BaseModel):
+    """Schema for a single lead in bulk transfer"""
+    name: str
+    phone: str
+    email: Optional[EmailStr] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "John Doe",
+                "phone": "+1234567890",
+                "email": "john@example.com"
+            }
+        }
+
+
+class BulkLeadTransferRequest(BaseModel):
+    """Schema for bulk lead transfer request"""
+    leads: List[LeadTransferItem]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "leads": [
+                    {
+                        "name": "John Doe",
+                        "phone": "+1234567890",
+                        "email": "john@example.com"
+                    },
+                    {
+                        "name": "Jane Smith",
+                        "phone": "+1987654321",
+                        "email": "jane@example.com"
+                    }
+                ]
+            }
+        }
+
+
+class LeadTransferError(BaseModel):
+    """Schema for individual lead transfer error"""
+    index: int
+    phone: str
+    reason: str
+
+
+class BulkLeadTransferResponse(BaseModel):
+    """Schema for bulk lead transfer response"""
+    success: bool
+    total_submitted: int
+    created: int
+    skipped: int
+    failed: int
+    errors: Optional[List[LeadTransferError]] = None
+    message: str
+
+
+@router.post("/partner-transfer", response_model=BulkLeadTransferResponse)
+async def partner_transfer_leads(
+    request: BulkLeadTransferRequest,
+    partner: Partner = Depends(verify_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Secure endpoint for partners to transfer leads via API.
+
+    **Authentication Required**: Include your API key in the `X-API-Key` header.
+
+    **Rate Limiting**: Subject to your partner rate limit (check with admin).
+
+    This endpoint allows authorized partners to submit leads in bulk to our platform.
+    Each lead will be associated with your partner account for tracking and analytics.
+
+    Args:
+        request: Bulk transfer request with list of leads
+        partner: Authenticated partner (from API key)
+        db: Database session
+
+    Returns:
+        BulkLeadTransferResponse: Summary of transfer results
+
+    Raises:
+        HTTPException: 401 if unauthorized, 429 if rate limit exceeded
+    """
+    try:
+        # Check rate limit
+        rate_limiter.check_rate_limit(partner.id, partner.rate_limit)
+
+        total_submitted = len(request.leads)
+        created = 0
+        skipped = 0
+        failed = 0
+        errors = []
+
+        logger.info(f"Partner '{partner.name}' (ID: {partner.id}) submitting {total_submitted} leads")
+
+        # Process each lead
+        for index, lead_data in enumerate(request.leads):
+            try:
+                # Detect language from phone
+                language, country_code = detect_language_from_phone(lead_data.phone)
+
+                # Check if lead already exists
+                existing = db.query(Lead).filter(Lead.phone == lead_data.phone).first()
+                if existing:
+                    skipped += 1
+                    errors.append(LeadTransferError(
+                        index=index,
+                        phone=lead_data.phone,
+                        reason=f"Phone number already exists (Lead ID: {existing.id})"
+                    ))
+                    continue
+
+                # Create lead associated with partner
+                lead = Lead(
+                    name=lead_data.name,
+                    phone=lead_data.phone,
+                    email=lead_data.email,
+                    country_code=country_code,
+                    language=language,
+                    partner_id=partner.id,  # Associate with partner
+                    status=LeadStatus.PENDING
+                )
+
+                db.add(lead)
+                created += 1
+
+            except Exception as e:
+                failed += 1
+                errors.append(LeadTransferError(
+                    index=index,
+                    phone=lead_data.phone,
+                    reason=str(e)
+                ))
+                logger.error(f"Error processing lead at index {index}: {str(e)}")
+                continue
+
+        # Commit all successful leads
+        db.commit()
+
+        logger.info(
+            f"Partner '{partner.name}' transfer complete: "
+            f"{created} created, {skipped} skipped, {failed} failed"
+        )
+
+        return BulkLeadTransferResponse(
+            success=True,
+            total_submitted=total_submitted,
+            created=created,
+            skipped=skipped,
+            failed=failed,
+            errors=errors if errors else None,
+            message=f"Successfully processed {created} out of {total_submitted} leads"
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (auth, rate limit)
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Partner transfer failed for '{partner.name}': {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transfer failed: {str(e)}"
+        )

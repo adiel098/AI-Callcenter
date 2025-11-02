@@ -45,7 +45,9 @@
       "Bash(timeout 5 bash:*)",
       "Bash(npx tsc:*)",
       "Bash(Select-String -Pattern \"Analytics|error TS\")",
-      "Bash(Select-String -NotMatch \"error TS6133\")"
+      "Bash(Select-String -NotMatch \"error TS6133\")",
+      "Bash(Select-String -Pattern \"TESTING|Initializing|Services initialized|Simulating|User:|AI Intent|AI Response|booking|BOOKING|Event ID|Zoom Link|Video Link|Invite sent|Message:|WORKING|NO ZOOM|Check:|TEST COMPLETE\")",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": []

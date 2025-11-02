@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Settings as SettingsIcon, Save, RotateCcw, Loader2, Mic } from 'lucide-react';
+import { Settings as SettingsIcon, Save, RotateCcw, Loader2, Mic, Play, StopCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getSystemPrompt, updateSystemPrompt, getDefaultSystemPrompt, getAvailableVoices, getDefaultVoice, updateDefaultVoice } from '../services/api';
 
@@ -14,6 +14,8 @@ export default function Settings() {
   // Voice settings state
   const [selectedVoice, setSelectedVoice] = useState<{ id: string; name: string } | null>(null);
   const [voiceDirty, setVoiceDirty] = useState(false);
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   // Fetch current system prompt
   const { data: currentPrompt, isLoading } = useQuery({

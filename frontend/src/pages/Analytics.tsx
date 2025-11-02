@@ -9,15 +9,11 @@ import {
   Users,
   Phone,
   Calendar,
-  TrendingUp,
-  DollarSign,
   Target,
 } from 'lucide-react';
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -25,7 +21,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { motion } from 'framer-motion';
@@ -36,15 +31,42 @@ export default function Analytics() {
     queryFn: getAnalyticsOverview,
   });
 
-  const { data: callOutcomes, isLoading: outcomesLoading } = useQuery({
+  const { data: callOutcomesData, isLoading: outcomesLoading } = useQuery({
     queryKey: ['call-outcomes'],
     queryFn: getCallOutcomes,
   });
 
-  const { data: languageData, isLoading: languageLoading } = useQuery({
+  const { data: languageDistData, isLoading: languageLoading } = useQuery({
     queryKey: ['language-distribution'],
     queryFn: getLanguageDistribution,
   });
+
+  // Transform call outcomes for charts
+  const callOutcomes = callOutcomesData?.outcomes?.map((item: any) => ({
+    name: item.outcome,
+    value: item.count,
+    color: getOutcomeColor(item.outcome),
+  })) || [];
+
+  // Transform language distribution for charts
+  const languageData = languageDistData?.languages?.map((item: any) => ({
+    language: item.language.toUpperCase(),
+    calls: item.count,
+  })) || [];
+
+  function getOutcomeColor(outcome: string): string {
+    const colorMap: Record<string, string> = {
+      'MEETING_SCHEDULED': '#10b981',
+      'NOT_INTERESTED': '#ef4444',
+      'NO_ANSWER': '#6b7280',
+      'VOICEMAIL': '#f59e0b',
+      'CALLBACK_REQUESTED': '#3b82f6',
+      'INTERESTED': '#8b5cf6',
+      'FAILED': '#dc2626',
+      'COMPLETED': '#059669',
+    };
+    return colorMap[outcome] || COLORS[0];
+  }
 
   const COLORS = ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
@@ -57,57 +79,41 @@ export default function Analytics() {
 
       {/* KPI Cards */}
       {analyticsLoading ? (
-        <StatCardsSkeleton count={6} />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <StatCardsSkeleton count={4} />
+      ) : analytics ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Leads"
-            value={analytics?.total_leads || 500}
+            value={analytics.total_leads}
             icon={Users}
             iconClassName="bg-blue-500/10 text-blue-500"
-            trend={{ value: 12, label: 'from last month' }}
             description="All time"
           />
           <StatCard
             title="Total Calls"
-            value={analytics?.total_calls || 346}
+            value={analytics.total_calls}
             icon={Phone}
             iconClassName="bg-green-500/10 text-green-500"
-            trend={{ value: 8, label: 'from last month' }}
-            description="All time"
+            description={`${analytics.calls_today} today`}
           />
           <StatCard
             title="Meetings Booked"
-            value={analytics?.total_meetings || 90}
+            value={analytics.total_meetings}
             icon={Calendar}
             iconClassName="bg-purple-500/10 text-purple-500"
-            trend={{ value: 15, label: 'from last month' }}
-            description="All time"
+            description={`${analytics.meetings_scheduled_today} today`}
           />
           <StatCard
             title="Conversion Rate"
-            value={`${analytics?.conversion_rate || 26}%`}
+            value={`${analytics.conversion_rate}%`}
             icon={Target}
             iconClassName="bg-indigo-500/10 text-indigo-500"
-            trend={{ value: 3, label: 'from last month' }}
             description="Calls to meetings"
           />
-          <StatCard
-            title="Revenue Impact"
-            value="$45,000"
-            icon={DollarSign}
-            iconClassName="bg-emerald-500/10 text-emerald-500"
-            trend={{ value: 18, label: 'from last month' }}
-            description="Estimated value"
-          />
-          <StatCard
-            title="ROI"
-            value="385%"
-            icon={TrendingUp}
-            iconClassName="bg-pink-500/10 text-pink-500"
-            trend={{ value: 22, label: 'from last month' }}
-            description="Return on investment"
-          />
+        </div>
+      ) : (
+        <div className="text-center text-muted-foreground py-8">
+          No analytics data available
         </div>
       )}
 
@@ -150,7 +156,7 @@ export default function Analytics() {
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {callOutcomes.map((entry, index) => (
+                          {callOutcomes.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -263,41 +269,76 @@ export default function Analytics() {
               <CardHeader>
                 <CardTitle>Conversion Funnel</CardTitle>
                 <CardDescription>
-                  Lead journey from initial contact to closed deal
+                  Lead journey from initial contact to meeting
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-                  Conversion funnel data coming soon
-                </div>
+                {analytics ? (
+                  <div className="space-y-6">
+                    {/* Funnel Visualization */}
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <div className="bg-blue-500/10 border-2 border-blue-500 rounded-lg p-6 text-center">
+                          <p className="text-3xl font-bold text-blue-600">{analytics.total_leads}</p>
+                          <p className="text-sm text-muted-foreground mt-1">Total Leads</p>
+                        </div>
+                      </div>
 
-                {/* Conversion Rates */}
-                <div className="mt-6 grid gap-4 md:grid-cols-4">
-                  <div className="rounded-lg border p-4 text-center">
-                    <p className="text-2xl font-bold text-green-600">69%</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Leads to Calls
-                    </p>
+                      <div className="relative mx-8">
+                        <div className="bg-green-500/10 border-2 border-green-500 rounded-lg p-6 text-center">
+                          <p className="text-3xl font-bold text-green-600">{analytics.total_calls}</p>
+                          <p className="text-sm text-muted-foreground mt-1">Calls Made</p>
+                          <p className="text-xs text-green-600 font-medium mt-2">
+                            {analytics.total_leads > 0
+                              ? `${((analytics.total_calls / analytics.total_leads) * 100).toFixed(1)}%`
+                              : '0%'
+                            } conversion
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="relative mx-16">
+                        <div className="bg-purple-500/10 border-2 border-purple-500 rounded-lg p-6 text-center">
+                          <p className="text-3xl font-bold text-purple-600">{analytics.total_meetings}</p>
+                          <p className="text-sm text-muted-foreground mt-1">Meetings Booked</p>
+                          <p className="text-xs text-purple-600 font-medium mt-2">
+                            {analytics.total_calls > 0
+                              ? `${analytics.conversion_rate}%`
+                              : '0%'
+                            } conversion
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Conversion Rates */}
+                    <div className="mt-8 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-lg border p-4 text-center">
+                        <p className="text-2xl font-bold text-green-600">
+                          {analytics.total_leads > 0
+                            ? `${((analytics.total_calls / analytics.total_leads) * 100).toFixed(1)}%`
+                            : '0%'
+                          }
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Leads to Calls
+                        </p>
+                      </div>
+                      <div className="rounded-lg border p-4 text-center">
+                        <p className="text-2xl font-bold text-purple-600">
+                          {analytics.conversion_rate}%
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Calls to Meetings
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-lg border p-4 text-center">
-                    <p className="text-2xl font-bold text-blue-600">52%</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Calls to Interest
-                    </p>
+                ) : (
+                  <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                    No conversion funnel data available
                   </div>
-                  <div className="rounded-lg border p-4 text-center">
-                    <p className="text-2xl font-bold text-purple-600">50%</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Interest to Meetings
-                    </p>
-                  </div>
-                  <div className="rounded-lg border p-4 text-center">
-                    <p className="text-2xl font-bold text-pink-600">50%</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Meetings to Closed
-                    </p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>

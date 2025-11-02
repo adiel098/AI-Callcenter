@@ -41,7 +41,11 @@
       "Bash(tasklist:*)",
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
-      "Bash(timeout 8 bash -c 'while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done && echo \"\"Backend is ready\"\"')"
+      "Bash(timeout 8 bash -c 'while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do sleep 0.5; done && echo \"\"Backend is ready\"\"')",
+      "Bash(timeout 5 bash:*)",
+      "Bash(npx tsc:*)",
+      "Bash(Select-String -Pattern \"Analytics|error TS\")",
+      "Bash(Select-String -NotMatch \"error TS6133\")"
     ],
     "deny": [],
     "ask": []

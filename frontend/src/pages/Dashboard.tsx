@@ -18,9 +18,6 @@ import {
   Flame,
   Sparkles,
   TrendingUp,
-  Upload,
-  Rocket,
-  BarChart3,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -256,42 +253,55 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => {
-                const ActivityIcon = getActivityIcon(activity.type);
-                const StatusIcon = getStatusIcon(activity.status);
+            {activityLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-sm text-muted-foreground">Loading activity...</p>
+              </div>
+            ) : recentActivity.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivity.map((activity: any, index: number) => {
+                  const ActivityIcon = getActivityIcon(activity.type);
+                  const StatusIcon = getStatusIcon(activity.status);
 
-                return (
-                  <motion.div
-                    key={activity.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`rounded-full p-2 ${getStatusColor(activity.status)}`}>
-                        <ActivityIcon className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">{activity.title}</p>
-                          <span className="text-xs text-muted-foreground">
-                            {activity.time}
-                          </span>
+                  // Format time to relative format
+                  const timeAgo = formatDistanceToNow(new Date(activity.time), { addSuffix: true });
+
+                  return (
+                    <motion.div
+                      key={activity.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className={`rounded-full p-2 ${getStatusColor(activity.status)}`}>
+                          <ActivityIcon className="h-4 w-4" />
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {activity.description}
-                        </p>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">{activity.title}</p>
+                            <span className="text-xs text-muted-foreground">
+                              {timeAgo}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {activity.description}
+                          </p>
+                        </div>
+                        <StatusIcon className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <StatusIcon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    {index < recentActivity.length - 1 && (
-                      <Separator className="my-4" />
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
+                      {index < recentActivity.length - 1 && (
+                        <Separator className="my-4" />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-sm text-muted-foreground">No recent activity</p>
+              </div>
+            )}
           </ScrollArea>
         </CardContent>
       </Card>

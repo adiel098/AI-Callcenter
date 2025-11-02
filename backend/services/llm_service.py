@@ -38,12 +38,13 @@ class LLMService:
     - Book meetings (Google Calendar handles email invitations automatically)
     """
 
-    def __init__(self, calendar_service=None):
+    def __init__(self, calendar_service=None, zoom_service=None):
         """
         Initialize LLM service with tool support
 
         Args:
             calendar_service: CalendarService instance for booking
+            zoom_service: ZoomService instance for video links (optional)
         """
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = "gpt-4o-mini"  # Fast and cost-effective
@@ -51,6 +52,7 @@ class LLMService:
 
         # Services for executing tools
         self.calendar_service = calendar_service
+        self.zoom_service = zoom_service
 
     def _load_system_prompt(self) -> str:
         """
@@ -389,6 +391,26 @@ Google Calendar will automatically send the invitation and reminders.
             meeting_title = args.get("meeting_title", "Sales Meeting")
             meeting_description = args.get("description", f"Meeting with {args['guest_name']}")
 
+            # Create Zoom meeting if service is available
+            zoom_link = None
+            if self.zoom_service:
+                try:
+                    zoom_meeting = self.zoom_service.create_meeting(
+                        topic=meeting_title,
+                        start_time=meeting_datetime,
+                        duration=duration,
+                        agenda=meeting_description
+                    )
+                    if zoom_meeting:
+                        zoom_link = zoom_meeting['join_url']
+                        # Add Zoom link to calendar description
+                        meeting_description += f"\n\nJoin Zoom Meeting:\n{zoom_meeting['join_url']}\n"
+                        meeting_description += f"Meeting ID: {zoom_meeting['meeting_id']}\n"
+                        meeting_description += f"Password: {zoom_meeting['password']}"
+                        logger.info(f"Zoom meeting created: {zoom_link}")
+                except Exception as e:
+                    logger.warning(f"Failed to create Zoom meeting (continuing without): {e}")
+
             # Create meeting via calendar service
             # Google Calendar automatically sends invite to the attendee
             result = self.calendar_service.create_meeting(
@@ -410,6 +432,7 @@ Google Calendar will automatically send the invitation and reminders.
                 "success": True,
                 "event_id": event_id,
                 "google_meet_link": google_meet_link,
+                "zoom_link": zoom_link,
                 "message": f"Meeting booked and calendar invite sent to {args['guest_email']}"
             }
 

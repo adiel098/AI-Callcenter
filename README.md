@@ -292,7 +292,18 @@ The system uses Google Calendar API to check availability and book meetings. Fol
 6. Click **"Enable"** button
 7. Wait 2-3 minutes for API to propagate
 
-#### Step 2: Create Service Account (Recommended for Production)
+#### Step 2: Choose Authentication Method
+
+**Important:** There are two authentication methods. Choose based on your account type:
+
+| Account Type | Recommended Method | Why |
+|--------------|-------------------|-----|
+| **Personal Gmail** | OAuth (Step 2B) | Service accounts can't invite attendees to personal calendars |
+| **Google Workspace** | Service Account (Step 2A) | Better for production, requires Domain-Wide Delegation |
+
+#### Step 2A: Create Service Account (For Google Workspace)
+
+⚠️ **Note:** Service accounts require **Domain-Wide Delegation** to invite attendees. Without it, you'll get a `forbiddenForServiceAccounts` error. See troubleshooting section for details.
 
 1. Go to **[APIs & Services > Credentials](https://console.cloud.google.com/apis/credentials)**
 2. Click **"Create Credentials"** → **"Service Account"**
@@ -324,9 +335,9 @@ The system uses Google Calendar API to check availability and book meetings. Fol
     GOOGLE_CALENDAR_ID=your_calendar_id@group.calendar.google.com
     ```
 
-#### Alternative: OAuth Credentials (Development)
+#### Step 2B: OAuth Credentials (For Personal Gmail or Development)
 
-If you prefer user-based authentication:
+⭐ **Recommended for personal Gmail accounts** - No Domain-Wide Delegation needed!
 
 1. Go to **[APIs & Services > Credentials](https://console.cloud.google.com/apis/credentials)**
 2. Click **"Create Credentials"** → **"OAuth client ID"**
@@ -571,6 +582,112 @@ Google Calendar API has not been used in project XXXXXX before or it is disabled
    ```
 5. Test again using the verification scripts in the Google Calendar Setup section
 
+#### Error: `403 Forbidden - forbiddenForServiceAccounts`
+```
+Service accounts cannot invite attendees without Domain-Wide Delegation of Authority
+```
+
+**What This Means:**
+- ✅ Google Calendar API is enabled (the previous error is fixed!)
+- ❌ Service accounts need special permission to send meeting invites with attendees
+- This only affects **service account authentication** (not OAuth)
+- Common when using personal Gmail accounts (not Google Workspace)
+
+**Solution A: Switch to OAuth (Recommended for Personal Gmail)** ⭐
+
+If you're using a personal Gmail account, switch to OAuth authentication:
+
+1. **Rename or remove service account file:**
+   ```bash
+   cd backend
+   mv service-account.json service-account.json.backup
+   ```
+
+2. **Ensure OAuth credentials exist:**
+   ```bash
+   # Check if you have credentials.json
+   ls -la backend/credentials.json
+   ```
+
+   If not, follow **"Alternative: OAuth Credentials"** in the Google Calendar Setup section above.
+
+3. **Delete existing token (if any):**
+   ```bash
+   rm backend/token.json
+   ```
+
+4. **Restart application:**
+   ```bash
+   # The CalendarService will automatically use OAuth instead
+   uvicorn backend.main:app --reload --port 8000
+   ```
+
+5. **Authenticate in browser:**
+   - First calendar operation will open browser
+   - Sign in with your Google account
+   - Grant calendar permissions
+   - Token saved to `backend/token.json`
+
+6. **Verify it works:**
+   ```bash
+   cd backend
+   python test_calendar.py
+   ```
+
+**Solution B: Enable Domain-Wide Delegation (For Google Workspace Only)**
+
+If you have a Google Workspace organization with admin access:
+
+1. **In Google Cloud Console:**
+   - Go to [IAM & Admin > Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
+   - Click on your service account
+   - Click **"Show Domain-Wide Delegation"**
+   - Click **"Enable Google Workspace Domain-Wide Delegation"**
+   - Note the **Client ID** (looks like `123456789012345678901`)
+
+2. **In Google Workspace Admin Console:**
+   - Go to [admin.google.com](https://admin.google.com)
+   - Navigate to **Security > Access and data control > API Controls**
+   - Click **"Manage Domain-Wide Delegation"**
+   - Click **"Add new"**
+   - Enter the service account **Client ID**
+   - Add OAuth scopes:
+     ```
+     https://www.googleapis.com/auth/calendar
+     https://www.googleapis.com/auth/calendar.events
+     ```
+   - Click **"Authorize"**
+
+3. **Update service account code (if needed):**
+   - Ensure your service account is delegating a user email
+   - This typically requires code changes in `calendar_service.py`
+
+4. **Restart application and test**
+
+**Solution C: Workaround - Events Without Attendees**
+
+Quick workaround if you want to keep service account:
+
+1. **Modify calendar service to not add attendees:**
+   - Edit `backend/services/calendar_service.py`
+   - Remove or comment out the `attendees` field in event creation
+   - Send meeting details via email separately using `email_service.py`
+
+2. **Trade-offs:**
+   - ❌ No automatic calendar invites to guests
+   - ❌ Guests won't see event in their calendar
+   - ✅ Works immediately without additional setup
+   - ✅ Can still send email confirmations
+
+**Which Solution to Choose:**
+
+| Your Situation | Recommended Solution |
+|----------------|---------------------|
+| Personal Gmail account | **Solution A** (OAuth) |
+| Google Workspace + Admin access | **Solution B** (Domain-Wide Delegation) |
+| Google Workspace + No admin access | **Solution A** (OAuth) |
+| Quick testing/development | **Solution C** (Workaround) |
+
 #### Error: `404 Not Found` or `Calendar not found`
 ```
 Resource not found as specified or Insufficient Permission
@@ -705,6 +822,7 @@ AI conversation completes but no meeting appears on calendar.
 | Error Code | Error Message | Quick Fix |
 |------------|--------------|-----------|
 | **403** | `accessNotConfigured` | Enable Google Calendar API in Google Cloud Console |
+| **403** | `forbiddenForServiceAccounts` | Switch to OAuth authentication OR enable Domain-Wide Delegation |
 | **404** | `Calendar not found` | Verify calendar ID and sharing permissions |
 | **401** | `Invalid credentials` | Check credentials file path and validity |
 | **400** | `Bad Request` | Check date/time format and timezone |

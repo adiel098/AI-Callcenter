@@ -239,19 +239,39 @@ Google Calendar will automatically send the invitation and reminders.
             Tool execution result
         """
         try:
-            logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+            logger.info("=" * 80)
+            logger.info(f"🔧 TOOL EXECUTION: {tool_name}")
+            logger.info(f"Arguments: {json.dumps(tool_args, indent=2, default=str)}")
+            logger.info("=" * 80)
+
+            result = None
 
             if tool_name == "check_calendar_availability":
-                return await self._check_calendar_availability(tool_args)
+                logger.info("📅 Executing: check_calendar_availability")
+                result = await self._check_calendar_availability(tool_args)
 
             elif tool_name == "book_meeting":
-                return await self._book_meeting(tool_args)
+                logger.info("📆 Executing: book_meeting")
+                result = await self._book_meeting(tool_args)
 
             else:
+                logger.error(f"❌ Unknown tool requested: {tool_name}")
                 return {"error": f"Unknown tool: {tool_name}"}
 
+            logger.info("=" * 80)
+            logger.info(f"✅ TOOL RESULT: {tool_name}")
+            logger.info(f"Result: {json.dumps(result, indent=2, default=str)}")
+            logger.info("=" * 80)
+
+            return result
+
         except Exception as e:
-            logger.error(f"Tool execution error ({tool_name}): {str(e)}")
+            logger.error("=" * 80)
+            logger.error(f"❌ TOOL EXECUTION ERROR: {tool_name}")
+            logger.error(f"   - Error: {str(e)}")
+            logger.error(f"   - Type: {type(e).__name__}")
+            logger.error(f"   - Full traceback:", exc_info=True)
+            logger.error("=" * 80)
             return {"error": str(e)}
 
     def _parse_date_string(self, date_str: str) -> datetime:
@@ -309,8 +329,11 @@ Google Calendar will automatically send the invitation and reminders.
         Returns:
             Dictionary with success status and available slots
         """
+        logger.info("📅 CHECK CALENDAR AVAILABILITY - Starting")
+        logger.info(f"Request args: {json.dumps(args, indent=2)}")
+
         if not self.calendar_service:
-            logger.error("Calendar service not available")
+            logger.error("❌ Calendar service not available")
             return {
                 "success": False,
                 "error": "Calendar service is not configured. Please contact support."
@@ -321,24 +344,35 @@ Google Calendar will automatically send the invitation and reminders.
             num_slots = args.get("num_slots", 3)
             preferred_date = args.get("preferred_date", "tomorrow")
 
+            logger.info(f"   - Preferred date (input): {preferred_date}")
+            logger.info(f"   - Duration: {duration} minutes")
+            logger.info(f"   - Number of slots requested: {num_slots}")
+
             # Parse the preferred date
             start_date = self._parse_date_string(preferred_date)
-            logger.info(f"Checking availability from {start_date.date()} (user requested: {preferred_date})")
+            logger.info(f"✅ Date parsed successfully")
+            logger.info(f"   - Start date: {start_date.strftime('%A, %B %d, %Y at %I:%M %p')}")
 
             # Calculate end date (2 weeks from preferred date)
             end_date = start_date + timedelta(days=14)
+            logger.info(f"   - End date: {end_date.strftime('%A, %B %d, %Y')}")
 
             # Get available slots from calendar service
+            logger.info("🔍 Querying calendar for available slots...")
             slots = self.calendar_service.get_available_slots(
                 start_date=start_date,
                 end_date=end_date,
                 duration_minutes=duration
             )
 
+            logger.info(f"✅ Calendar query complete - found {len(slots)} total slots")
+
             # Extract just the display strings for the LLM
             display_slots = [slot['display'] for slot in slots[:num_slots]]
 
-            logger.info(f"Found {len(display_slots)} available slots")
+            logger.info(f"📋 Returning {len(display_slots)} slots to AI:")
+            for i, slot in enumerate(display_slots, 1):
+                logger.info(f"   {i}. {slot}")
 
             return {
                 "success": True,
@@ -346,7 +380,9 @@ Google Calendar will automatically send the invitation and reminders.
             }
 
         except Exception as e:
-            logger.error(f"Error checking calendar availability: {e}")
+            logger.error(f"❌ Error checking calendar availability: {e}")
+            logger.error(f"   - Error type: {type(e).__name__}")
+            logger.error(f"   - Full traceback:", exc_info=True)
             return {"success": False, "error": str(e)}
 
     async def _book_meeting(self, args: Dict) -> Dict:
@@ -368,8 +404,13 @@ Google Calendar will automatically send the invitation and reminders.
         Returns:
             Dictionary with success status, event_id, and google_meet_link
         """
+        logger.info("=" * 80)
+        logger.info("BOOKING MEETING - Starting process")
+        logger.info("=" * 80)
+        logger.info(f"Booking args received: {json.dumps(args, indent=2)}")
+
         if not self.calendar_service:
-            logger.error("Calendar service not available for booking")
+            logger.error("❌ Calendar service not available for booking")
             return {
                 "success": False,
                 "error": "Calendar service is not configured. Please contact support."
@@ -377,10 +418,14 @@ Google Calendar will automatically send the invitation and reminders.
 
         try:
             # Validate and parse datetime
+            logger.info(f"📅 Parsing datetime: {args.get('datetime')}")
             try:
                 meeting_datetime = datetime.fromisoformat(args["datetime"])
+                logger.info(f"✅ DateTime parsed successfully: {meeting_datetime}")
+                logger.info(f"   - Date: {meeting_datetime.strftime('%A, %B %d, %Y')}")
+                logger.info(f"   - Time: {meeting_datetime.strftime('%I:%M %p')} UTC")
             except (ValueError, KeyError) as e:
-                logger.error(f"Invalid datetime format: {args.get('datetime')}")
+                logger.error(f"❌ Invalid datetime format: {args.get('datetime')} - Error: {e}")
                 return {
                     "success": False,
                     "error": "Invalid datetime format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
@@ -391,9 +436,18 @@ Google Calendar will automatically send the invitation and reminders.
             meeting_title = args.get("meeting_title", "Sales Meeting")
             meeting_description = args.get("description", f"Meeting with {args['guest_name']}")
 
+            logger.info(f"📋 Meeting details:")
+            logger.info(f"   - Title: {meeting_title}")
+            logger.info(f"   - Guest Name: {args.get('guest_name')}")
+            logger.info(f"   - Guest Email: {args.get('guest_email')}")
+            logger.info(f"   - Duration: {duration} minutes")
+            logger.info(f"   - Start: {meeting_datetime.isoformat()}")
+            logger.info(f"   - End: {end_time.isoformat()}")
+
             # Create Zoom meeting if service is available
             zoom_link = None
             if self.zoom_service:
+                logger.info("🎥 Zoom service available - attempting to create Zoom meeting")
                 try:
                     zoom_meeting = self.zoom_service.create_meeting(
                         topic=meeting_title,
@@ -403,16 +457,28 @@ Google Calendar will automatically send the invitation and reminders.
                     )
                     if zoom_meeting:
                         zoom_link = zoom_meeting['join_url']
+                        logger.info(f"✅ Zoom meeting created successfully")
+                        logger.info(f"   - Join URL: {zoom_link}")
+                        logger.info(f"   - Meeting ID: {zoom_meeting['meeting_id']}")
+                        logger.info(f"   - Password: {zoom_meeting.get('password', 'N/A')}")
+
                         # Add Zoom link to calendar description
                         meeting_description += f"\n\nJoin Zoom Meeting:\n{zoom_meeting['join_url']}\n"
                         meeting_description += f"Meeting ID: {zoom_meeting['meeting_id']}\n"
                         meeting_description += f"Password: {zoom_meeting['password']}"
-                        logger.info(f"Zoom meeting created: {zoom_link}")
+                    else:
+                        logger.warning("⚠️ Zoom service returned None - no meeting created")
                 except Exception as e:
-                    logger.warning(f"Failed to create Zoom meeting (continuing without): {e}")
+                    logger.warning(f"⚠️ Failed to create Zoom meeting (continuing without): {e}")
+            else:
+                logger.info("ℹ️ No Zoom service available - skipping Zoom meeting creation")
 
             # Create meeting via calendar service
-            # Google Calendar automatically sends invite to the attendee
+            logger.info("📆 Creating Google Calendar event...")
+            logger.info(f"   - Summary: {meeting_title}")
+            logger.info(f"   - Attendee: {args['guest_email']}")
+            logger.info(f"   - Description length: {len(meeting_description)} chars")
+
             result = self.calendar_service.create_meeting(
                 summary=meeting_title,
                 start_time=meeting_datetime,
@@ -422,12 +488,19 @@ Google Calendar will automatically send the invitation and reminders.
             )
 
             if not result:
+                logger.error("❌ Calendar service returned None - failed to create event")
                 return {"success": False, "error": "Failed to create calendar event"}
 
             event_id = result['event_id']
             google_meet_link = result.get('google_meet_link')
 
-            logger.info(f"Meeting booked successfully. Google Calendar sent invite to {args['guest_email']}")
+            logger.info("✅ MEETING BOOKED SUCCESSFULLY!")
+            logger.info(f"   - Event ID: {event_id}")
+            logger.info(f"   - Google Meet Link: {google_meet_link or 'N/A'}")
+            logger.info(f"   - Zoom Link: {zoom_link or 'N/A'}")
+            logger.info(f"   - Calendar invite automatically sent to: {args['guest_email']}")
+            logger.info("=" * 80)
+
             return {
                 "success": True,
                 "event_id": event_id,
@@ -437,7 +510,11 @@ Google Calendar will automatically send the invitation and reminders.
             }
 
         except Exception as e:
-            logger.error(f"Meeting booking error: {e}")
+            logger.error("=" * 80)
+            logger.error(f"❌ MEETING BOOKING ERROR: {e}")
+            logger.error(f"   - Error type: {type(e).__name__}")
+            logger.error(f"   - Full traceback:", exc_info=True)
+            logger.error("=" * 80)
             return {"success": False, "error": str(e)}
 
     async def get_response_with_tools(

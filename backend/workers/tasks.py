@@ -78,11 +78,11 @@ def initiate_call(self, lead_id: int):
             # Update lead status
             lead.status = LeadStatus.CALLING
 
-            # Create call record
+            # Create call record (no outcome set yet - will be set during/after call)
             call = Call(
                 lead_id=lead.id,
                 language=lead.language,
-                outcome=CallOutcome.IN_PROGRESS
+                outcome=None
             )
             db.add(call)
             db.commit()
@@ -112,9 +112,9 @@ def initiate_call(self, lead_id: int):
                     "tools_enabled": True
                 }
             else:
-                call.outcome = CallOutcome.FAILED
+                call.outcome = CallOutcome.NO_ANSWER  # Failed to initiate = no answer
                 call.ended_at = datetime.utcnow()
-                lead.status = LeadStatus.FAILED
+                lead.status = LeadStatus.NO_ANSWER
                 db.commit()
 
                 return {"success": False, "error": "Failed to initiate call"}

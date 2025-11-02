@@ -42,8 +42,7 @@ class Call(Base):
     language = Column(String(10), nullable=True)  # Language used in call
     outcome = Column(
         Enum(CallOutcome),
-        default=CallOutcome.NO_ANSWER,  # Default to NO_ANSWER instead of removed IN_PROGRESS
-        nullable=False,
+        nullable=True,  # Nullable - set during/after call based on conversation
         index=True
     )
 

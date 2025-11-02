@@ -202,12 +202,14 @@ def process_conversation_turn(
                             scheduled_time=meeting_datetime,
                             guest_email=meeting_args['guest_email'],
                             calendar_event_id=tool_call['result'].get('meeting_id'),
+                            duration=meeting_args.get('duration', 30),  # Default 30 minutes
+                            meeting_link=tool_call['result'].get('meeting_link'),  # Google Meet link
                             status=MeetingStatus.SCHEDULED
                         )
                         db.add(meeting)
 
                         # Update call and lead
-                        call.outcome = CallOutcome.MEETING_SCHEDULED
+                        call.outcome = CallOutcome.INTERESTED  # Meeting scheduled = interested
                         lead.status = LeadStatus.MEETING_SCHEDULED
 
                         logger.info(f"[TOOLS] ✅ Meeting booked! Event ID: {meeting.calendar_event_id}")
@@ -220,19 +222,24 @@ def process_conversation_turn(
             )
             db.add(ai_turn)
 
-            # Handle intent
+            # Handle intent and set outcome
             if intent == ConversationIntent.MEETING_BOOKED:
                 logger.info(f"[TOOLS] Meeting successfully booked via function calling!")
-                call.outcome = CallOutcome.MEETING_SCHEDULED
+                call.outcome = CallOutcome.INTERESTED  # Meeting scheduled = interested
 
             elif intent == ConversationIntent.NOT_INTERESTED:
                 call.outcome = CallOutcome.NOT_INTERESTED
                 lead.status = LeadStatus.NOT_INTERESTED
 
             elif intent == ConversationIntent.END_CALL:
-                if call.outcome == CallOutcome.IN_PROGRESS:
-                    call.outcome = CallOutcome.COMPLETED
+                # If no outcome set yet, mark as BUSY
+                if call.outcome not in [CallOutcome.INTERESTED, CallOutcome.NOT_INTERESTED]:
+                    call.outcome = CallOutcome.BUSY
                 call.ended_at = datetime.utcnow()
+
+            elif intent in [ConversationIntent.INTERESTED, ConversationIntent.SCHEDULE_MEETING]:
+                # User shows interest - mark as BUSY (interested but no meeting yet)
+                call.outcome = CallOutcome.BUSY
 
             db.commit()
 

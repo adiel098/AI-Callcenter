@@ -74,17 +74,12 @@ interface CallDetails extends Call {
   conversation_history: ConversationMessage[];
 }
 
-// Match backend CallOutcome enum values
+// Match backend CallOutcome enum values (4 simplified statuses)
 const outcomeConfig: Record<string, { label: string; color: string; icon: any }> = {
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
-  failed: { label: 'Failed', color: 'bg-red-100 text-red-800', icon: XCircle },
+  interested: { label: 'Interested (Meeting Scheduled)', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
+  not_interested: { label: 'Not Interested', color: 'bg-red-100 text-red-800', icon: XCircle },
   no_answer: { label: 'No Answer', color: 'bg-yellow-100 text-yellow-800', icon: PhoneMissed },
-  busy: { label: 'Busy', color: 'bg-orange-100 text-orange-800', icon: PhoneOff },
-  in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-800', icon: Phone },
-  meeting_scheduled: { label: 'Meeting Scheduled', color: 'bg-purple-100 text-purple-800', icon: CheckCircle2 },
-  not_interested: { label: 'Not Interested', color: 'bg-gray-100 text-gray-800', icon: XCircle },
-  voicemail: { label: 'Voicemail', color: 'bg-yellow-100 text-yellow-800', icon: PhoneMissed },
-  unknown: { label: 'Unknown', color: 'bg-gray-100 text-gray-800', icon: Phone },
+  busy: { label: 'Busy - Call Again Later', color: 'bg-blue-100 text-blue-800', icon: Clock },
 };
 
 export default function Calls() {

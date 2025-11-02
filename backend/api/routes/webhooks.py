@@ -48,8 +48,9 @@ async def twilio_status_callback(request: Request, db: Session = Depends(get_db)
                 call.recording_url = recording_url
 
             # Update call outcome if not already set
-            if call.outcome == CallOutcome.IN_PROGRESS:
-                call.outcome = CallOutcome.COMPLETED
+            # Don't override if outcome was already set during call (INTERESTED, NOT_INTERESTED, BUSY)
+            if call.outcome not in [CallOutcome.INTERESTED, CallOutcome.NOT_INTERESTED, CallOutcome.BUSY]:
+                call.outcome = CallOutcome.BUSY  # Default for completed calls
 
             # Update lead status
             lead = db.query(Lead).filter(Lead.id == call.lead_id).first()
@@ -62,7 +63,7 @@ async def twilio_status_callback(request: Request, db: Session = Depends(get_db)
 
         elif call_status in ['busy', 'no-answer', 'failed']:
             call.ended_at = datetime.utcnow()
-            call.outcome = CallOutcome.NO_ANSWER if call_status == 'no-answer' else CallOutcome.FAILED
+            call.outcome = CallOutcome.NO_ANSWER  # Map all technical failures to NO_ANSWER
 
             # Update lead
             lead = db.query(Lead).filter(Lead.id == call.lead_id).first()
@@ -231,12 +232,12 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
         )
         db.add(ai_turn)
 
-        # Determine if we should end the call
+        # Determine if we should end the call and set outcome
         end_call = False
 
         if intent == ConversationIntent.MEETING_BOOKED:
             logger.info("Meeting successfully booked, will end call after confirmation")
-            call.outcome = CallOutcome.MEETING_SCHEDULED
+            call.outcome = CallOutcome.INTERESTED  # Meeting scheduled = interested
             end_call = True
 
         elif intent == ConversationIntent.NOT_INTERESTED:
@@ -248,13 +249,20 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
 
         elif intent == ConversationIntent.END_CALL:
             logger.info("Conversation complete, ending call")
-            if call.outcome == CallOutcome.IN_PROGRESS:
-                call.outcome = CallOutcome.COMPLETED
+            # If no outcome set yet, mark as BUSY (interested but no meeting)
+            if call.outcome not in [CallOutcome.INTERESTED, CallOutcome.NOT_INTERESTED]:
+                call.outcome = CallOutcome.BUSY
             call.ended_at = datetime.utcnow()
             end_call = True
 
+        elif intent in [ConversationIntent.INTERESTED, ConversationIntent.SCHEDULE_MEETING]:
+            # User shows interest or is scheduling - mark as BUSY for now
+            logger.info(f"User interested, continuing conversation with intent: {intent}")
+            call.outcome = CallOutcome.BUSY  # Interested but no meeting yet
+            end_call = False
+
         else:
-            # NEEDS_INFO, INTERESTED, SCHEDULE_MEETING - continue conversation
+            # NEEDS_INFO - continue conversation
             logger.info(f"Continuing conversation with intent: {intent}")
             end_call = False
 

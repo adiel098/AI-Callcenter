@@ -10,15 +10,18 @@ from .base import Base
 
 
 class CallOutcome(str, enum.Enum):
-    """Call outcome enum"""
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    MEETING_SCHEDULED = "meeting_scheduled"
+    """
+    Call outcome enum - simplified to 4 actionable statuses
+
+    INTERESTED: Meeting successfully scheduled
+    NOT_INTERESTED: User declined/not interested
+    NO_ANSWER: No one answered (technical issue, voicemail, etc.)
+    BUSY: User interested but no meeting booked yet (needs follow-up)
+    """
+    INTERESTED = "interested"
     NOT_INTERESTED = "not_interested"
     NO_ANSWER = "no_answer"
     BUSY = "busy"
-    FAILED = "failed"
-    VOICEMAIL = "voicemail"
 
 
 class Call(Base):

@@ -46,14 +46,10 @@ export default function Analytics() {
 
   function getOutcomeColor(outcome: string): string {
     const colorMap: Record<string, string> = {
-      'MEETING_SCHEDULED': '#10b981',
-      'NOT_INTERESTED': '#ef4444',
-      'NO_ANSWER': '#6b7280',
-      'VOICEMAIL': '#f59e0b',
-      'CALLBACK_REQUESTED': '#3b82f6',
-      'INTERESTED': '#8b5cf6',
-      'FAILED': '#dc2626',
-      'COMPLETED': '#059669',
+      'interested': '#10b981',        // Green - Meeting scheduled (success)
+      'not_interested': '#ef4444',    // Red - Not interested
+      'no_answer': '#6b7280',         // Gray - No answer
+      'busy': '#3b82f6',              // Blue - Interested but no meeting yet
     };
     return colorMap[outcome] || COLORS[0];
   }

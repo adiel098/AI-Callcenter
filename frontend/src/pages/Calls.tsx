@@ -44,33 +44,31 @@ import { format } from 'date-fns';
 
 interface Call {
   id: number;
-  lead_name: string;
-  phone: string;
-  status: 'completed' | 'failed' | 'no_answer' | 'busy' | 'in_progress';
-  outcome?: 'meeting_scheduled' | 'interested' | 'not_interested' | 'callback' | null;
-  duration: number;
-  created_at: string;
+  lead_id: number;
+  lead_name?: string;
+  phone?: string;
+  outcome?: string;  // Backend field name (not status)
+  duration?: number;
+  started_at?: string;  // Backend field name (not created_at)
+  ended_at?: string;
   summary?: string;
-  transcript?: Array<{
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp: string;
-  }>;
+  transcript?: string;  // Backend returns plain text, not array
+  twilio_call_sid?: string;
+  recording_url?: string;
+  language?: string;
 }
 
-const statusConfig = {
+// Match backend CallOutcome enum values
+const outcomeConfig: Record<string, { label: string; color: string; icon: any }> = {
   completed: { label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
   failed: { label: 'Failed', color: 'bg-red-100 text-red-800', icon: XCircle },
   no_answer: { label: 'No Answer', color: 'bg-yellow-100 text-yellow-800', icon: PhoneMissed },
   busy: { label: 'Busy', color: 'bg-orange-100 text-orange-800', icon: PhoneOff },
   in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-800', icon: Phone },
-};
-
-const outcomeConfig = {
-  meeting_scheduled: { label: 'Meeting Scheduled', color: 'bg-purple-100 text-purple-800' },
-  interested: { label: 'Interested', color: 'bg-green-100 text-green-800' },
-  not_interested: { label: 'Not Interested', color: 'bg-gray-100 text-gray-800' },
-  callback: { label: 'Callback Requested', color: 'bg-blue-100 text-blue-800' },
+  meeting_scheduled: { label: 'Meeting Scheduled', color: 'bg-purple-100 text-purple-800', icon: CheckCircle2 },
+  not_interested: { label: 'Not Interested', color: 'bg-gray-100 text-gray-800', icon: XCircle },
+  voicemail: { label: 'Voicemail', color: 'bg-yellow-100 text-yellow-800', icon: PhoneMissed },
+  unknown: { label: 'Unknown', color: 'bg-gray-100 text-gray-800', icon: Phone },
 };
 
 export default function Calls() {
@@ -84,7 +82,8 @@ export default function Calls() {
     queryFn: () => getCalls(1, 100),
   });
 
-  const calls: Call[] = callsData?.calls || [];
+  // Backend returns array directly, not nested in 'calls' property
+  const calls: Call[] = callsData || [];
 
   // Removed mock transcript - using real data from API
 
@@ -119,8 +118,9 @@ export default function Calls() {
       header: 'Duration',
       cell: ({ row }) => {
         const duration = row.getValue('duration') as number;
+        if (!duration) return <span className="text-xs text-muted-foreground">—</span>;
         const minutes = Math.floor(duration / 60);
-        const seconds = duration % 60;
+        const seconds = Math.floor(duration % 60);
         return (
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -130,11 +130,12 @@ export default function Calls() {
       },
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
+      accessorKey: 'outcome',
+      header: 'Outcome',
       cell: ({ row }) => {
-        const status = row.getValue('status') as keyof typeof statusConfig;
-        const config = statusConfig[status];
+        const outcome = row.getValue('outcome') as string;
+        if (!outcome) return <span className="text-xs text-muted-foreground">—</span>;
+        const config = outcomeConfig[outcome] || outcomeConfig.unknown;
         const Icon = config.icon;
         return (
           <Badge variant="secondary" className={cn('font-medium', config.color)}>
@@ -145,24 +146,10 @@ export default function Calls() {
       },
     },
     {
-      accessorKey: 'outcome',
-      header: 'Outcome',
-      cell: ({ row }) => {
-        const outcome = row.getValue('outcome') as keyof typeof outcomeConfig | null;
-        if (!outcome) return <span className="text-xs text-muted-foreground">—</span>;
-        const config = outcomeConfig[outcome];
-        return (
-          <Badge variant="outline" className={cn('font-medium', config.color)}>
-            {config.label}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'created_at',
+      accessorKey: 'started_at',
       header: 'Date',
       cell: ({ row }) => {
-        const date = row.getValue('created_at') as string;
+        const date = row.getValue('started_at') as string;
         return (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarIcon className="h-4 w-4" />
@@ -250,43 +237,30 @@ export default function Calls() {
             <div className="mt-6 space-y-4">
               {/* Call Info */}
               <div className="grid grid-cols-2 gap-4 rounded-lg border p-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      'font-medium',
-                      statusConfig[selectedCall.status].color
-                    )}
-                  >
-                    {statusConfig[selectedCall.status].label}
-                  </Badge>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Duration</p>
-                  <p className="text-sm font-medium">
-                    {Math.floor(selectedCall.duration / 60)}:
-                    {(selectedCall.duration % 60).toString().padStart(2, '0')}
-                  </p>
-                </div>
                 {selectedCall.outcome && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Outcome</p>
                     <Badge
-                      variant="outline"
+                      variant="secondary"
                       className={cn(
                         'font-medium',
-                        outcomeConfig[selectedCall.outcome].color
+                        (outcomeConfig[selectedCall.outcome] || outcomeConfig.unknown).color
                       )}
                     >
-                      {outcomeConfig[selectedCall.outcome].label}
+                      {(outcomeConfig[selectedCall.outcome] || outcomeConfig.unknown).label}
                     </Badge>
                   </div>
                 )}
                 <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Duration</p>
+                  <p className="text-sm font-medium">
+                    {selectedCall.duration ? `${Math.floor(selectedCall.duration / 60)}:${Math.floor(selectedCall.duration % 60).toString().padStart(2, '0')}` : '—'}
+                  </p>
+                </div>
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">Date</p>
                   <p className="text-sm font-medium">
-                    {format(new Date(selectedCall.created_at), 'MMM d, yyyy HH:mm')}
+                    {selectedCall.started_at ? format(new Date(selectedCall.started_at), 'MMM d, yyyy HH:mm') : '—'}
                   </p>
                 </div>
               </div>
@@ -303,59 +277,18 @@ export default function Calls() {
 
               {/* Transcript */}
               <ScrollArea className="h-[500px] pr-4">
-                <div className="space-y-4">
-                  {selectedCall.transcript?.map((message, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={cn(
-                        'flex gap-3',
-                        message.role === 'user' ? 'justify-end' : 'justify-start'
-                      )}
-                    >
-                      {message.role === 'assistant' && (
-                        <Avatar className="h-8 w-8 mt-1">
-                          <AvatarFallback className="bg-primary/10">
-                            <Bot className="h-4 w-4 text-primary" />
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div
-                        className={cn(
-                          'rounded-lg px-4 py-2 max-w-[80%]',
-                          message.role === 'assistant'
-                            ? 'bg-muted'
-                            : 'bg-primary text-primary-foreground'
-                        )}
-                      >
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-xs font-medium">
-                            {message.role === 'assistant' ? 'AI Assistant' : 'User'}
-                          </span>
-                          <span
-                            className={cn(
-                              'text-xs',
-                              message.role === 'assistant'
-                                ? 'text-muted-foreground'
-                                : 'text-primary-foreground/70'
-                            )}
-                          >
-                            {message.timestamp}
-                          </span>
-                        </div>
-                        <p className="text-sm">{message.content}</p>
-                      </div>
-                      {message.role === 'user' && (
-                        <Avatar className="h-8 w-8 mt-1">
-                          <AvatarFallback>
-                            <User className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </motion.div>
-                  ))}
+                <div className="space-y-2">
+                  {selectedCall.transcript ? (
+                    <div className="rounded-lg border p-4 bg-muted/30">
+                      <pre className="text-sm whitespace-pre-wrap font-sans">
+                        {selectedCall.transcript}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div className="text-center text-sm text-muted-foreground py-8">
+                      No transcript available for this call
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </div>
@@ -380,29 +313,30 @@ export default function Calls() {
             <div className="space-y-4">
               {/* Call Info */}
               <div className="grid grid-cols-3 gap-4 rounded-lg border p-4 bg-muted/50">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Status</p>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      'font-medium',
-                      statusConfig[summaryCall.status].color
-                    )}
-                  >
-                    {statusConfig[summaryCall.status].label}
-                  </Badge>
-                </div>
+                {summaryCall.outcome && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Outcome</p>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        'font-medium',
+                        (outcomeConfig[summaryCall.outcome] || outcomeConfig.unknown).color
+                      )}
+                    >
+                      {(outcomeConfig[summaryCall.outcome] || outcomeConfig.unknown).label}
+                    </Badge>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Duration</p>
                   <p className="text-sm font-medium">
-                    {Math.floor(summaryCall.duration / 60)}:
-                    {(summaryCall.duration % 60).toString().padStart(2, '0')}
+                    {summaryCall.duration ? `${Math.floor(summaryCall.duration / 60)}:${Math.floor(summaryCall.duration % 60).toString().padStart(2, '0')}` : '—'}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">Date</p>
                   <p className="text-sm font-medium">
-                    {format(new Date(summaryCall.created_at), 'MMM d, yyyy')}
+                    {summaryCall.started_at ? format(new Date(summaryCall.started_at), 'MMM d, yyyy') : '—'}
                   </p>
                 </div>
               </div>
@@ -426,15 +360,15 @@ export default function Calls() {
 
               {summaryCall.outcome && (
                 <div className="flex items-center justify-between rounded-lg border p-4">
-                  <span className="text-sm font-medium text-muted-foreground">Outcome</span>
+                  <span className="text-sm font-medium text-muted-foreground">Outcome Details</span>
                   <Badge
                     variant="outline"
                     className={cn(
                       'font-medium',
-                      outcomeConfig[summaryCall.outcome].color
+                      (outcomeConfig[summaryCall.outcome] || outcomeConfig.unknown).color
                     )}
                   >
-                    {outcomeConfig[summaryCall.outcome].label}
+                    {(outcomeConfig[summaryCall.outcome] || outcomeConfig.unknown).label}
                   </Badge>
                 </div>
               )}

@@ -218,7 +218,7 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
                     db.add(meeting)
 
                     # Update call and lead
-                    call.outcome = CallOutcome.MEETING_SCHEDULED
+                    call.outcome = CallOutcome.INTERESTED  # Meeting scheduled = interested
                     if lead:
                         lead.status = LeadStatus.MEETING_SCHEDULED
 

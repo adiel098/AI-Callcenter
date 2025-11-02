@@ -215,9 +215,9 @@ def process_conversation_turn(
                             call_id=call.id,
                             scheduled_time=meeting_datetime,
                             guest_email=meeting_args['guest_email'],
-                            calendar_event_id=tool_call['result'].get('meeting_id'),
-                            duration=meeting_args.get('duration', 30),  # Default 30 minutes
-                            meeting_link=tool_call['result'].get('meeting_link'),  # Google Meet link
+                            calendar_event_id=tool_call['result'].get('event_id'),
+                            duration=meeting_args.get('duration_minutes', 30),  # Default 30 minutes
+                            meeting_link=tool_call['result'].get('google_meet_link'),  # Google Meet link
                             status=MeetingStatus.SCHEDULED
                         )
                         db.add(meeting)

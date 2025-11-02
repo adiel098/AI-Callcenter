@@ -213,6 +213,10 @@ Google Calendar will automatically send the invitation and reminders.
                                 "type": "string",
                                 "description": "Meeting title/subject",
                                 "default": "Sales Meeting"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Meeting agenda or description (optional)"
                             }
                         },
                         "required": ["datetime", "guest_email", "guest_name"]
@@ -350,6 +354,18 @@ Google Calendar will automatically send the invitation and reminders.
         This method:
         1. Creates calendar event (without attendees to avoid service account restriction)
         2. Sends .ics calendar invite via email (works with any email provider)
+
+        Args:
+            args: Dictionary containing:
+                - datetime: ISO format datetime string (required)
+                - guest_email: Guest's email address (required)
+                - guest_name: Guest's name (required)
+                - duration_minutes: Meeting duration (default: 30)
+                - meeting_title: Meeting title (default: "Sales Meeting")
+                - description: Meeting description (optional)
+
+        Returns:
+            Dictionary with success status, event_id, and google_meet_link
         """
         if not self.calendar_service:
             logger.error("Calendar service not available for booking")
@@ -361,7 +377,16 @@ Google Calendar will automatically send the invitation and reminders.
         try:
             from backend.services.email_service import EmailService
 
-            meeting_datetime = datetime.fromisoformat(args["datetime"])
+            # Validate and parse datetime
+            try:
+                meeting_datetime = datetime.fromisoformat(args["datetime"])
+            except (ValueError, KeyError) as e:
+                logger.error(f"Invalid datetime format: {args.get('datetime')}")
+                return {
+                    "success": False,
+                    "error": "Invalid datetime format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
+                }
+
             duration = args.get("duration_minutes", 30)
             end_time = meeting_datetime + timedelta(minutes=duration)
             meeting_title = args.get("meeting_title", "Sales Meeting")

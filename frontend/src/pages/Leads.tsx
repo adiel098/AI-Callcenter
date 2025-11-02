@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, uploadLeadsCSV } from '../services/api';
+import { getLeads, uploadLeadsCSV, createLead } from '../services/api';
 import { PageHeader } from '@/components/PageHeader';
 import { DataTable } from '@/components/DataTable';
 import { Button } from '@/components/ui/button';
@@ -71,6 +71,14 @@ export default function Leads() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAddingLead, setIsAddingLead] = useState(false);
+
+  // Add Lead form state
+  const [newLead, setNewLead] = useState({
+    name: '',
+    phone: '',
+    email: '',
+  });
 
   const { data: leadsData, isLoading, refetch } = useQuery({
     queryKey: ['leads'],
@@ -213,6 +221,43 @@ export default function Leads() {
     }
   };
 
+  const handleAddLead = async () => {
+    // Validate required fields
+    if (!newLead.name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    if (!newLead.phone.trim()) {
+      toast.error('Phone number is required');
+      return;
+    }
+
+    // Basic phone validation (must start with + and have at least 10 digits)
+    const phoneRegex = /^\+\d{10,}$/;
+    if (!phoneRegex.test(newLead.phone.trim())) {
+      toast.error('Phone number must start with + and include country code (e.g., +1234567890)');
+      return;
+    }
+
+    setIsAddingLead(true);
+    try {
+      await createLead({
+        name: newLead.name.trim(),
+        phone: newLead.phone.trim(),
+        email: newLead.email.trim() || undefined,
+      });
+      toast.success('Lead added successfully!');
+      setAddLeadDialogOpen(false);
+      setNewLead({ name: '', phone: '', email: '' }); // Reset form
+      refetch(); // Refresh the leads list
+    } catch (error) {
+      toast.error('Failed to add lead. Please try again.');
+      console.error(error);
+    } finally {
+      setIsAddingLead(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -344,32 +389,54 @@ export default function Leads() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
-              <Input id="name" placeholder="John Doe" />
+              <Input
+                id="name"
+                placeholder="John Doe"
+                value={newLead.name}
+                onChange={(e) => setNewLead({ ...newLead, name: e.target.value })}
+                disabled={isAddingLead}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone *</Label>
-              <Input id="phone" type="tel" placeholder="+1234567890" />
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+1234567890"
+                value={newLead.phone}
+                onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })}
+                disabled={isAddingLead}
+              />
+              <p className="text-xs text-muted-foreground">
+                Include country code (e.g., +1 for US, +44 for UK)
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="john@example.com" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
-              <Input id="company" placeholder="Acme Corp" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea id="notes" placeholder="Additional notes..." rows={3} />
+              <Label htmlFor="email">Email (Optional)</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="john@example.com"
+                value={newLead.email}
+                onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
+                disabled={isAddingLead}
+              />
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setAddLeadDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddLeadDialogOpen(false);
+                setNewLead({ name: '', phone: '', email: '' });
+              }}
+              disabled={isAddingLead}
+            >
               Cancel
             </Button>
-            <Button onClick={() => toast.success('Lead added successfully!')}>
-              Add Lead
+            <Button onClick={handleAddLead} disabled={isAddingLead}>
+              {isAddingLead ? 'Adding...' : 'Add Lead'}
             </Button>
           </div>
         </DialogContent>

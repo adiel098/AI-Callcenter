@@ -48,8 +48,8 @@ async def twilio_status_callback(request: Request, db: Session = Depends(get_db)
                 call.recording_url = recording_url
 
             # Update call outcome if not already set
-            # Don't override if outcome was already set during call (INTERESTED, NOT_INTERESTED, BUSY)
-            if call.outcome not in [CallOutcome.INTERESTED, CallOutcome.NOT_INTERESTED, CallOutcome.BUSY]:
+            # Only set default if no outcome was ever determined
+            if call.outcome is None:
                 call.outcome = CallOutcome.BUSY  # Default for completed calls
 
             # Update lead status

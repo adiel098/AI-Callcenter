@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getMeetings } from '../services/api';
 import { PageHeader } from '@/components/PageHeader';
@@ -6,8 +5,6 @@ import { DataTable } from '@/components/DataTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar } from '@/components/ui/calendar';
 import { TableSkeleton } from '@/components/LoadingStates';
 import { EmptyState } from '@/components/EmptyState';
 import {
@@ -20,7 +17,7 @@ import {
 import { ColumnDef } from '@tanstack/react-table';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { format, addDays, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
 
 interface Meeting {
   id: number;
@@ -45,8 +42,6 @@ const statusConfig = {
 };
 
 export default function Meetings() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-
   const { data: meetingsData, isLoading } = useQuery({
     queryKey: ['meetings'],
     queryFn: () => getMeetings(1, 100),
@@ -141,13 +136,6 @@ export default function Meetings() {
     },
   ];
 
-  // Get meetings for selected date
-  const meetingsOnSelectedDate = selectedDate
-    ? meetings.filter((meeting) =>
-        isSameDay(new Date(meeting.scheduled_at), selectedDate)
-      )
-    : [];
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -161,124 +149,32 @@ export default function Meetings() {
         }
       />
 
-      <Tabs defaultValue="list" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="list">List View</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="list" className="space-y-4">
-          {isLoading ? (
-            <TableSkeleton rows={5} />
-          ) : meetings.length === 0 ? (
-            <EmptyState
-              icon={CalendarIcon}
-              title="No meetings scheduled"
-              description="Scheduled meetings will appear here once leads book time with you"
-              action={{
-                label: 'Schedule Meeting',
-                onClick: () => {},
-              }}
-            />
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <DataTable
-                columns={columns}
-                data={meetings}
-                searchKey="lead_name"
-                searchPlaceholder="Search by lead name..."
-              />
-            </motion.div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="calendar" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Calendar */}
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Calendar</CardTitle>
-                <CardDescription>Select a date to view scheduled meetings</CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="rounded-md border"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Meetings on selected date */}
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {selectedDate ? format(selectedDate, 'MMM d, yyyy') : 'Select a date'}
-                </CardTitle>
-                <CardDescription>
-                  {meetingsOnSelectedDate.length} meeting(s) scheduled
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {meetingsOnSelectedDate.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-muted-foreground">
-                    No meetings scheduled for this date
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {meetingsOnSelectedDate.map((meeting) => {
-                      return (
-                        <motion.div
-                          key={meeting.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="rounded-lg border p-3 space-y-2"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium">{meeting.lead_name}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                {format(new Date(meeting.scheduled_at), 'h:mm a')} • {meeting.duration || 30} min
-                              </div>
-                            </div>
-                            <Badge
-                              variant="secondary"
-                              className={cn(
-                                'text-xs',
-                                statusConfig[meeting.status].color
-                              )}
-                            >
-                              {statusConfig[meeting.status].label}
-                            </Badge>
-                          </div>
-                          {meeting.meeting_link && (
-                            <Button variant="outline" size="sm" className="w-full" asChild>
-                              <a
-                                href={meeting.meeting_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <ExternalLink className="mr-2 h-3 w-3" />
-                                Join Meeting
-                              </a>
-                            </Button>
-                          )}
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+      {isLoading ? (
+        <TableSkeleton rows={5} />
+      ) : meetings.length === 0 ? (
+        <EmptyState
+          icon={CalendarIcon}
+          title="No meetings scheduled"
+          description="Scheduled meetings will appear here once leads book time with you"
+          action={{
+            label: 'Schedule Meeting',
+            onClick: () => {},
+          }}
+        />
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <DataTable
+            columns={columns}
+            data={meetings}
+            searchKey="lead_name"
+            searchPlaceholder="Search by lead name..."
+          />
+        </motion.div>
+      )}
 
       {/* Upcoming Meetings Summary */}
       <Card>

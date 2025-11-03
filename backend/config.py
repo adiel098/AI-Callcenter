@@ -23,12 +23,6 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str
 
-    # ElevenLabs
-    elevenlabs_api_key: str
-
-    # Deepgram
-    deepgram_api_key: str
-
     # Google Calendar
     google_calendar_credentials_file: str = "credentials.json"
     google_calendar_token_file: str = "token.json"

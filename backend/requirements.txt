@@ -16,11 +16,9 @@ redis==5.0.1
 # API Clients
 twilio==8.11.1
 openai==1.10.0
-elevenlabs==2.21.0
 google-api-python-client==2.116.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.0
-deepgram-sdk==5.2.0
 
 # Utilities
 python-dotenv==1.0.0

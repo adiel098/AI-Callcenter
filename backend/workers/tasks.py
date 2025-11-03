@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from backend.workers.celery_app import celery_app
 from backend.database import get_db_context
 from backend.models import Lead, Call, CallOutcome, LeadStatus, Meeting, MeetingStatus, ConversationHistory, SpeakerRole, Setting
-from backend.services import TwilioService, SpeechService, CalendarService
+from backend.services import TwilioService, CalendarService
 from backend.services.llm_service import LLMService, ConversationIntent
 from backend.services.zoom_service import ZoomService
 from backend.config import get_settings
@@ -24,7 +24,6 @@ class CallTask(Task):
     Lazy-loads services only when needed.
     """
     _twilio = None
-    _speech = None
     _llm = None
     _calendar = None
     _zoom = None
@@ -35,13 +34,6 @@ class CallTask(Task):
         if self._twilio is None:
             self._twilio = TwilioService()
         return self._twilio
-
-    @property
-    def speech(self):
-        """Speech service for STT (Deepgram) and TTS (ElevenLabs)"""
-        if self._speech is None:
-            self._speech = SpeechService()
-        return self._speech
 
     @property
     def llm(self):

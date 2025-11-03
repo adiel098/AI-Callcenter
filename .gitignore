@@ -87,3 +87,5 @@ celerybeat.pid
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+*.db
+*.db.backup

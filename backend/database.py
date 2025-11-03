@@ -12,12 +12,15 @@ from backend.models.base import Base
 settings = get_settings()
 
 # Create engine with connection pooling
+# Optimized for PostgreSQL with multiple workers and concurrent requests
 engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,  # Verify connections before using
-    pool_size=10,  # Connection pool size
-    max_overflow=20,  # Max overflow connections
-    echo=False  # Set to True for SQL query logging
+    pool_pre_ping=True,       # Verify connections before using
+    pool_size=20,              # Base connection pool (increased from 10)
+    max_overflow=30,           # Max overflow connections (increased from 20)
+    pool_timeout=30,           # Wait 30 seconds for connection before failing
+    pool_recycle=3600,         # Recycle connections after 1 hour (prevents stale connections)
+    echo=False                 # Set to True for SQL query logging (debug only)
 )
 
 # Session factory

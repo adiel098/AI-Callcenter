@@ -308,8 +308,10 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
 
         elif intent in [ConversationIntent.INTERESTED, ConversationIntent.SCHEDULE_MEETING]:
             # User shows interest or is scheduling - mark as BUSY for now
+            # Don't overwrite if meeting already booked (INTERESTED) or user declined (NOT_INTERESTED)
             logger.info(f"User interested, continuing conversation with intent: {intent}")
-            call.outcome = CallOutcome.BUSY  # Interested but no meeting yet
+            if call.outcome not in [CallOutcome.INTERESTED, CallOutcome.NOT_INTERESTED]:
+                call.outcome = CallOutcome.BUSY  # Interested but no meeting yet
             end_call = False
 
         else:

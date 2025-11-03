@@ -144,10 +144,20 @@ IMPORTANT: You have access to these tools for real actions:
 
 Use these tools when appropriate:
 - When user asks "When are you available?", use check_calendar_availability
-- When user agrees to a time and provides their email, use book_meeting
+- When user agrees to a time, use book_meeting immediately
 
-IMPORTANT: Always collect the guest's email before booking!
-Google Calendar will automatically send the invitation and reminders.
+🚨 CRITICAL EMAIL HANDLING:
+- Check the CONVERSATION CONTEXT for the lead's email address
+- If email is already provided in context, use it directly for booking WITHOUT asking again
+- Only ask for email if it's NOT available in the conversation context
+- When user says "you already have it", they're referring to the email in context - use it immediately
+
+⚠️ TOOL EXECUTION REQUIREMENT:
+- You MUST actually CALL the book_meeting tool - saying "I'll book it" is NOT enough
+- Only use past tense ("I've booked") AFTER successfully calling the tool
+- Never use future tense ("I'll book") as a substitute for calling the tool
+
+Google Calendar will automatically send the invitation and reminders when book_meeting is called.
 """
         return base_prompt + tool_instructions
 
@@ -552,9 +562,28 @@ Google Calendar will automatically send the invitation and reminders.
 
             # Add lead context if available
             if lead_info:
-                context = f"Lead information: Name: {lead_info.get('name', 'Unknown')}"
-                if lead_info.get('email'):
-                    context += f", Email: {lead_info['email']}"
+                lead_name = lead_info.get('name', 'Unknown')
+                lead_email = lead_info.get('email', '')
+
+                if lead_email:
+                    # Email is available - make it VERY clear to the AI
+                    context = f"""CONVERSATION CONTEXT:
+You are speaking with: {lead_name}
+Their email address on file: {lead_email}
+
+🚨 IMPORTANT: You already have their email address ({lead_email}).
+- DO NOT ask for it again
+- DO NOT ask them to confirm it
+- USE IT IMMEDIATELY when booking the meeting
+- If they say "you already have it", they are correct - proceed with booking using {lead_email}"""
+                else:
+                    # Email not available - AI needs to ask for it
+                    context = f"""CONVERSATION CONTEXT:
+You are speaking with: {lead_name}
+Their email address: NOT PROVIDED - you must ask for it before booking
+
+⚠️ REQUIRED: You MUST ask for their email address before you can book a meeting."""
+
                 messages.append({"role": "system", "content": context})
 
             # Add conversation history

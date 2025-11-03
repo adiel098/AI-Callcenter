@@ -58,34 +58,3 @@ async def verify_api_key(
 
     logger.info(f"Successful authentication: Partner '{partner.name}' (ID: {partner.id})")
     return partner
-
-
-async def verify_api_key_optional(
-    x_api_key: Annotated[Optional[str], Header(description="Optional partner API key")] = None,
-    db: Session = Depends(get_db)
-) -> Optional[Partner]:
-    """
-    Optional API key verification.
-
-    Returns partner if valid API key provided, otherwise None.
-    Does not raise exceptions.
-
-    Args:
-        x_api_key: Optional API key from X-API-Key header
-        db: Database session
-
-    Returns:
-        Partner or None: The authenticated partner if valid key provided, else None
-    """
-    if not x_api_key:
-        return None
-
-    try:
-        partner = db.query(Partner).filter(
-            Partner.api_key == x_api_key,
-            Partner.is_active == True
-        ).first()
-        return partner
-    except Exception as e:
-        logger.error(f"Error in optional API key verification: {str(e)}")
-        return None

@@ -48,6 +48,7 @@ class LLMService:
         """
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = "gpt-4o-mini"  # Fast and cost-effective
+        self.recently_offered_slots = []  # Track slots from check_calendar_availability
         self.system_prompt = self._load_system_prompt()
 
         # Services for executing tools
@@ -377,12 +378,17 @@ Google Calendar will automatically send the invitation and reminders when book_m
 
             logger.info(f"✅ Calendar query complete - found {len(slots)} total slots")
 
+            # Store the actual slot objects for validation during booking
+            selected_slots = slots[:num_slots]
+            self.recently_offered_slots = selected_slots
+
             # Extract just the display strings for the LLM
-            display_slots = [slot['display'] for slot in slots[:num_slots]]
+            display_slots = [slot['display'] for slot in selected_slots]
 
             logger.info(f"📋 Returning {len(display_slots)} slots to AI:")
             for i, slot in enumerate(display_slots, 1):
                 logger.info(f"   {i}. {slot}")
+                logger.info(f"      Stored datetime: {selected_slots[i-1]['start']}")
 
             return {
                 "success": True,
@@ -449,6 +455,32 @@ Google Calendar will automatically send the invitation and reminders when book_m
                     "success": False,
                     "error": "Invalid datetime format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
                 }
+
+            # Validate that the datetime matches one of the recently offered slots
+            if self.recently_offered_slots:
+                logger.info("🔍 Validating datetime against recently offered slots...")
+                offered_datetimes = [slot['start'] for slot in self.recently_offered_slots]
+
+                # Compare date and time (ignore timezone/microseconds)
+                matching_slot = None
+                for offered_dt in offered_datetimes:
+                    if (meeting_datetime.date() == offered_dt.date() and
+                        meeting_datetime.hour == offered_dt.hour and
+                        meeting_datetime.minute == offered_dt.minute):
+                        matching_slot = offered_dt
+                        break
+
+                if matching_slot:
+                    logger.info(f"✅ Datetime matches offered slot: {matching_slot.strftime('%A, %B %d at %I:%M %p')}")
+                else:
+                    logger.warning(f"⚠️ WARNING: Datetime does NOT match any offered slots!")
+                    logger.warning(f"   - Requested: {meeting_datetime.strftime('%A, %B %d at %I:%M %p')}")
+                    logger.warning(f"   - Offered slots were:")
+                    for i, slot in enumerate(self.recently_offered_slots, 1):
+                        logger.warning(f"      {i}. {slot['display']} ({slot['start'].strftime('%Y-%m-%d %H:%M')})")
+                    logger.warning("   - Proceeding with booking anyway, but AI may have selected wrong date!")
+            else:
+                logger.info("ℹ️ No recently offered slots to validate against (first booking or cache cleared)")
 
             duration = args.get("duration_minutes", 30)
             end_time = meeting_datetime + timedelta(minutes=duration)

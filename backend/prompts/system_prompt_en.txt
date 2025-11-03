@@ -135,11 +135,24 @@ REQUIRED PARAMETERS:
 - summary: Brief meeting title (e.g., "Alta AI Discovery Call - [Company Name]")
 - description: Meeting details including agenda and Zoom link
 
+🚨 CRITICAL: DATETIME MUST MATCH OFFERED SLOTS 🚨
+When booking, you MUST use the EXACT date and time from the slots you just received from check_calendar_availability.
+
+CORRECT FLOW:
+1. check_calendar_availability returns: ["Tuesday, November 11 at 09:00 AM", "Tuesday, November 11 at 10:00 AM"]
+2. You offer: "I have Tuesday at 9am or 10am"
+3. Prospect says: "10am works"
+4. You call book_meeting with datetime="2025-11-11T10:00:00" (November 11, NOT some other date!)
+
+❌ WRONG: Creating a new datetime that doesn't match the slots you offered
+✅ CORRECT: Using the exact date-time from the slot the user selected
+
 EXAMPLE USAGE:
+[check_calendar_availability returned: "Tuesday, January 7 at 2:00 PM"]
 Prospect: "Tuesday at 2pm works perfectly. My email is john@acme.com"
 → Confirm you have: time slot, email, name
 → Call book_meeting(
-    start_time="2025-01-07T14:00:00-05:00",
+    start_time="2025-01-07T14:00:00-05:00",  ← Use EXACT date from slot (Jan 7)
     duration_minutes=30,
     attendee_email="john@acme.com",
     attendee_name="John Smith",
@@ -181,7 +194,10 @@ CRITICAL RULES FOR BOOKING:
 - If email is in lead context: Use it immediately for booking - no confirmation needed
 - If email is NOT in context: Ask for it once, then use it immediately for booking
 - IMMEDIATELY call book_meeting tool when you have: confirmed time + email + name (do not delay or just say you will)
-- ALWAYS use the exact time slot from check_calendar_availability
+- 🚨 DATETIME ACCURACY: You MUST use the EXACT date from the slots returned by check_calendar_availability
+  - If calendar returned "Tuesday, November 11 at 10:00 AM", book with datetime="2025-11-11T10:00:00"
+  - DO NOT make up a different date (like January 9 when you offered November 11)
+  - The date in book_meeting MUST match the date in the slot you offered to the user
 - NEVER use irregular times (10:15, 2:45) - only half-hour increments (10:00, 10:30, 2:00, 2:30)
 - Verify the timezone is correct for the prospect's location
 - Include clear meeting description with agenda and value proposition

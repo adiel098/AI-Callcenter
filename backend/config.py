@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
     secret_key: str
 
+    # Call Settings
+    max_concurrent_calls: int = 50
+    call_timeout_seconds: int = 300
+    max_conversation_turns: int = 20
+
     # Monitoring
     sentry_dsn: Optional[str] = None
 

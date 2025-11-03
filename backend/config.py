@@ -40,13 +40,6 @@ class Settings(BaseSettings):
     zoom_client_id: Optional[str] = None
     zoom_client_secret: Optional[str] = None
 
-    # Email/SMTP (for sending calendar invites)
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_user: Optional[str] = None
-    smtp_password: Optional[str] = None
-    company_name: str = "Alta AI"
-
     # Application
     api_base_url: str = "http://localhost:8000"
     frontend_url: str = "http://localhost:5173"
@@ -54,11 +47,6 @@ class Settings(BaseSettings):
 
     # Monitoring
     sentry_dsn: Optional[str] = None
-
-    # Call Settings
-    max_concurrent_calls: int = 50
-    call_timeout_seconds: int = 300
-    max_conversation_turns: int = 20
 
     class Config:
         env_file = ".env"

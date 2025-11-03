@@ -134,32 +134,6 @@ async def get_language_distribution(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/calls-over-time")
-async def get_calls_over_time(days: int = 7, db: Session = Depends(get_db)):
-    """Get calls over time (last N days)"""
-    try:
-        start_date = datetime.utcnow() - timedelta(days=days)
-
-        # Query calls grouped by date
-        from sqlalchemy import cast, Date
-
-        calls_by_date = db.query(
-            cast(Call.started_at, Date).label('date'),
-            func.count(Call.id).label('count')
-        ).filter(
-            Call.started_at >= start_date
-        ).group_by(cast(Call.started_at, Date)).order_by('date').all()
-
-        return {
-            "data": [
-                {"date": str(date), "count": count}
-                for date, count in calls_by_date
-            ]
-        }
-
-    except Exception as e:
-        logger.error(f"Failed to get calls over time: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/lead-status-distribution")

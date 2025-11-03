@@ -59,30 +59,6 @@ class TwilioService:
             logger.error(f"Failed to initiate call to {to_phone_number}: {str(e)}")
             return None
 
-    def get_call_status(self, call_sid: str) -> Optional[Dict]:
-        """
-        Get current status of a call
-
-        Args:
-            call_sid: Twilio Call SID
-
-        Returns:
-            Dictionary with call details or None
-        """
-        try:
-            call = self.client.calls(call_sid).fetch()
-            return {
-                "sid": call.sid,
-                "status": call.status,
-                "duration": call.duration,
-                "from": call.from_,
-                "to": call.to,
-                "direction": call.direction,
-                "answered_by": call.answered_by
-            }
-        except Exception as e:
-            logger.error(f"Failed to fetch call {call_sid}: {str(e)}")
-            return None
 
     def get_call_recording_url(self, call_sid: str) -> Optional[str]:
         """
@@ -241,18 +217,3 @@ class TwilioService:
 
         return str(response)
 
-    @staticmethod
-    def generate_twiml_stream(websocket_url: str) -> str:
-        """
-        Generate TwiML for WebSocket streaming (real-time audio)
-
-        Args:
-            websocket_url: WebSocket URL for audio streaming
-
-        Returns:
-            TwiML XML string
-        """
-        response = VoiceResponse()
-        response.start().stream(url=websocket_url)
-        response.pause(length=60)  # Keep connection open
-        return str(response)

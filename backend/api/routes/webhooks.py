@@ -193,8 +193,7 @@ async def twilio_process_speech(request: Request, db: Session = Depends(get_db))
             from fastapi.responses import Response
             return Response(content=twiml, media_type="application/xml")
 
-        # Import Celery task
-        from backend.workers.tasks import process_conversation_turn
+        # Import models and services
         from backend.models import ConversationHistory, SpeakerRole, Lead
         from backend.services import LLMService, CalendarService
         from backend.services.zoom_service import ZoomService

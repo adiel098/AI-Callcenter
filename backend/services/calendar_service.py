@@ -183,6 +183,10 @@ class CalendarService:
             else:
                 current_time = start_date
 
+            # Ensure end_date is also timezone-aware (UTC)
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+
             # Round current_time to next half-hour boundary (00 or 30 minutes)
             if current_time.minute < 30:
                 current_time = current_time.replace(minute=30, second=0, microsecond=0)

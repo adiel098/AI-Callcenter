@@ -298,10 +298,10 @@ Google Calendar will automatically send the invitation and reminders when book_m
             date_str: Date string to parse
 
         Returns:
-            Parsed datetime object (defaults to tomorrow if unparseable)
+            Parsed datetime object (timezone-aware UTC, defaults to tomorrow if unparseable)
         """
         date_str_lower = date_str.lower().strip()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Handle common natural language dates
         if date_str_lower == "tomorrow":
@@ -321,7 +321,11 @@ Google Calendar will automatically send the invitation and reminders when book_m
         else:
             # Try parsing as ISO format (e.g., "2025-01-10")
             try:
-                return datetime.fromisoformat(date_str)
+                parsed = datetime.fromisoformat(date_str)
+                # Ensure timezone-aware
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                return parsed
             except (ValueError, TypeError):
                 # Default to tomorrow if unparseable
                 logger.warning(f"Could not parse date '{date_str}', defaulting to tomorrow")

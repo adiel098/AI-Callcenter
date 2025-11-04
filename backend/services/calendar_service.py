@@ -165,10 +165,17 @@ class CalendarService:
         calendar_id = calendar_id or settings.google_calendar_id or 'primary'
 
         try:
-            # Get busy times
+            # Ensure start_date and end_date are timezone-aware (UTC) before API call
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=timezone.utc)
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+
+            # Get busy times - format datetimes correctly for Google API
+            # Convert timezone-aware datetime to RFC 3339 format with 'Z' suffix
             body = {
-                "timeMin": start_date.isoformat() + 'Z',
-                "timeMax": end_date.isoformat() + 'Z',
+                "timeMin": start_date.isoformat().replace('+00:00', 'Z'),
+                "timeMax": end_date.isoformat().replace('+00:00', 'Z'),
                 "items": [{"id": calendar_id}]
             }
 
@@ -177,15 +184,7 @@ class CalendarService:
 
             # Generate available slots
             available_slots = []
-            # Ensure start_date is timezone-aware (UTC)
-            if start_date.tzinfo is None:
-                current_time = start_date.replace(tzinfo=timezone.utc)
-            else:
-                current_time = start_date
-
-            # Ensure end_date is also timezone-aware (UTC)
-            if end_date.tzinfo is None:
-                end_date = end_date.replace(tzinfo=timezone.utc)
+            current_time = start_date
 
             # Round current_time to next half-hour boundary (00 or 30 minutes)
             if current_time.minute < 30:

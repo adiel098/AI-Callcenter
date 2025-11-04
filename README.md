@@ -66,27 +66,31 @@
 ## 🔄 How It Works
 
 ```mermaid
-1. Lead Upload → Database
-   ↓
-2. Campaign Started → Celery worker queues call
-   ↓
-3. Twilio makes outbound call → Lead's phone rings
-   ↓
-4. User speaks → Twilio transcribes (real-time STT)
-   ↓
-5. GPT-4o-mini processes conversation
-   - Understands intent
-   - Decides which tools to use
-   - Calls: check_calendar_availability()
-   - Calls: book_meeting()
-   ↓
-6. AI generates natural response → Twilio TTS
-   ↓
-7. User hears AI response
-   ↓
-8. Conversation continues until meeting booked or call ends
-   ↓
-9. Meeting saved → Google Calendar invite sent → Analytics updated
+graph TD
+    A[1. Lead Upload] --> B[Database]
+    B --> C[2. Campaign Started]
+    C --> D[Celery Worker Queues Call]
+    D --> E[3. Twilio Makes Outbound Call]
+    E --> F[Lead's Phone Rings]
+    F --> G[4. User Speaks]
+    G --> H[Twilio Transcribes - Real-time STT]
+    H --> I[5. GPT-4o-mini Processes]
+    I --> J{AI Decision Engine}
+    J -->|Check Calendar| K[check_calendar_availability]
+    J -->|Book Meeting| L[book_meeting]
+    K --> M[6. AI Generates Response]
+    L --> M
+    M --> N[Twilio TTS]
+    N --> O[7. User Hears Response]
+    O --> P{Meeting Booked?}
+    P -->|No| G
+    P -->|Yes| Q[9. Save to Database]
+    Q --> R[Google Calendar Invite]
+    Q --> S[Analytics Updated]
+
+    style A fill:#e1f5ff
+    style I fill:#fff4e1
+    style Q fill:#e8f5e9
 ```
 
 ### Example Conversation Flow

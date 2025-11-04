@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 import logging
 from typing import List, Dict, Optional, Tuple, Any
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from sqlalchemy.orm import Session
 

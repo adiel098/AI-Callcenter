@@ -8,7 +8,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict
 import logging
 from pathlib import Path
@@ -177,7 +177,11 @@ class CalendarService:
 
             # Generate available slots
             available_slots = []
-            current_time = start_date
+            # Ensure start_date is timezone-aware (UTC)
+            if start_date.tzinfo is None:
+                current_time = start_date.replace(tzinfo=timezone.utc)
+            else:
+                current_time = start_date
 
             # Round current_time to next half-hour boundary (00 or 30 minutes)
             if current_time.minute < 30:
@@ -317,7 +321,7 @@ class CalendarService:
         Returns:
             List of available slots with times rounded to half-hour increments
         """
-        start_date = datetime.utcnow() + timedelta(days=1)
+        start_date = datetime.now(timezone.utc) + timedelta(days=1)
         # Always start at 9:00 AM (already a half-hour boundary)
         start_date = start_date.replace(hour=9, minute=0, second=0, microsecond=0)
         end_date = start_date + timedelta(days=14)  # Look 2 weeks ahead
